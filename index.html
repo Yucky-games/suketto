@@ -704,8 +704,8 @@
         <div class="brand-row">
           <h1>助っ人 オボエルくん</h1>
           <div class="counter-strip" aria-live="polite">
-            <span class="count-pill" id="teacher-count">先生 0</span>
-            <span class="count-pill" id="log-count">ログ 0</span>
+            <span class="count-pill" id="teacher-count">先生数 0</span>
+            <span class="count-pill" id="log-count">生徒数 0</span>
           </div>
         </div>
         <nav class="tab-bar" aria-label="画面切り替え">
@@ -822,13 +822,10 @@
         <div class="panel">
           <h2 class="section-title">ふっかつのじゅもん</h2>
           <div class="button-row">
-            <button class="btn primary" id="generate-backup-button" type="button">バックアップコードを作る</button>
+            <button class="btn primary" id="generate-backup-button" type="button">じゅもんを作る</button>
             <button class="btn ghost" id="copy-backup-button" type="button">コードをコピー</button>
           </div>
-          <label style="margin-top: 12px;">
-            バックアップコード
-            <textarea class="code-box" id="backup-code" placeholder="BA-SUKE-1:g:..." spellcheck="false"></textarea>
-          </label>
+          <textarea class="code-box export-textarea" id="backup-code" placeholder="BA-SUKE-1:g:..." spellcheck="false" aria-label="ふっかつのじゅもん"></textarea>
           <div class="button-row">
             <button class="btn primary" id="restore-backup-button" type="button">このコードから復元</button>
           </div>
@@ -1373,8 +1370,8 @@
       }
 
       function renderAll() {
-        el("teacher-count").textContent = `先生 ${state.teachers.length}`;
-        el("log-count").textContent = `ログ ${state.logs.length}`;
+        el("teacher-count").textContent = `先生数 ${state.teachers.length}`;
+        el("log-count").textContent = `生徒数 ${state.logs.length}`;
         renderSearchResults();
         renderTeachers();
       }
@@ -1761,7 +1758,7 @@
         const teacher = state.teachers.find((item) => item.id === teacherId);
         if (!teacher) return;
         const relatedLogs = state.logs.filter((log) => log.teacherId === teacherId);
-        const ok = confirm(`${teacher.currentName || "この先生"} の先生カードを削除します。\n紐づくログ ${relatedLogs.length}件も削除されます。\nバックアップコードがない場合は戻せません。`);
+        const ok = confirm(`${teacher.currentName || "この先生"} の先生カードを削除します。\n紐づく記録 ${relatedLogs.length}件も削除されます。\nふっかつのじゅもんがない場合は戻せません。`);
         if (!ok) return;
         state.teachers = state.teachers.filter((item) => item.id !== teacherId);
         state.logs = state.logs.filter((log) => log.teacherId !== teacherId);
@@ -1773,7 +1770,7 @@
         if (!log) return;
         const teacher = state.teachers.find((item) => item.id === log.teacherId);
         const label = [teacher?.currentName || log.observedName, log.studentName, log.checkedDate].filter(Boolean).join(" / ");
-        const ok = confirm(`${label || "このログ"} を削除します。\nバックアップコードがない場合は戻せません。`);
+        const ok = confirm(`${label || "この記録"} を削除します。\nふっかつのじゅもんがない場合は戻せません。`);
         if (!ok) return;
         state.logs = state.logs.filter((item) => item.id !== logId);
         saveState();
@@ -1867,7 +1864,7 @@
       async function restoreBackupCode(code) {
         const text = String(code || "").trim();
         const parts = text.split(":");
-        if (parts.length !== 3 || parts[0] !== BACKUP_PREFIX) throw new Error("バックアップコードの形式が違います。");
+        if (parts.length !== 3 || parts[0] !== BACKUP_PREFIX) throw new Error("じゅもんの形式が違います。");
         const mode = parts[1];
         const bytes = bytesFromBase64Url(parts[2]);
         let json;
@@ -1878,7 +1875,7 @@
         } else if (mode === "j") {
           json = new TextDecoder().decode(bytes);
         } else {
-          throw new Error("バックアップコードの種類が不明です。");
+          throw new Error("じゅもんの種類が不明です。");
         }
         const restored = expandFromBackup(JSON.parse(json));
         if (!Array.isArray(restored.teachers) || !Array.isArray(restored.logs)) throw new Error("復元データが壊れています。");
@@ -2243,11 +2240,11 @@
         el("generate-backup-button").addEventListener("click", async () => {
           const code = await generateBackupCode();
           el("backup-code").value = code;
-          setStatus("backup-status", `バックアップコードを作りました。${code.length}文字です。`);
+          setStatus("backup-status", `じゅもんを作りました。${code.length}文字です。`);
         });
-        el("copy-backup-button").addEventListener("click", () => copyText(el("backup-code").value, "backup-status", "バックアップコードをコピーしました。"));
+        el("copy-backup-button").addEventListener("click", () => copyText(el("backup-code").value, "backup-status", "じゅもんをコピーしました。"));
         el("restore-backup-button").addEventListener("click", async () => {
-          if (!confirm("現在のアプリ内データを、バックアップコードの内容で置き換えます。")) return;
+          if (!confirm("現在のアプリ内データを、じゅもんの内容で置き換えます。")) return;
           try {
             await restoreBackupCode(el("backup-code").value);
             setStatus("backup-status", "復元しました。");
@@ -2256,7 +2253,7 @@
           }
         });
         el("reset-data-button").addEventListener("click", () => {
-          if (!confirm("アプリ内データをすべて削除します。バックアップコードがない場合は復元できません。")) return;
+          if (!confirm("アプリ内データをすべて削除します。ふっかつのじゅもんがない場合は復元できません。")) return;
           state = emptyState();
           localStorage.removeItem(STORAGE_KEY);
           renderAll();
@@ -2279,7 +2276,7 @@
           try {
             state = restoreStateFromCsv(el("csv-export").value);
             saveState();
-            setStatus("csv-status", `CSVから復元しました。先生 ${state.teachers.length}件、ログ ${state.logs.length}件です。`);
+            setStatus("csv-status", `CSVから復元しました。先生数 ${state.teachers.length}件、生徒数 ${state.logs.length}件です。`);
           } catch (error) {
             setStatus("csv-status", error.message || "CSVから復元できませんでした。", true);
           }
