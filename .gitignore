@@ -1,0 +1,14 @@
+.DS_Store
+
+# Local Codex/project operation docs. Keep the public repo minimal.
+AGENTS.md
+docs/
+
+# Local and generated files
+node_modules/
+.env
+.env.*
+dist/
+build/
+.vercel/
+

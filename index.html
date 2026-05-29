@@ -1,0 +1,1570 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>助っ人ログカンリくん</title>
+  <meta name="description" content="ブルーアーカイブの助っ人スクリーンショットを外部AIでCSV化し、あとから検索できるログとして管理する非公式ファンツールです。">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#2563eb">
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #eef4fb;
+      --surface: #ffffff;
+      --surface-2: #f8fbff;
+      --line: #d8e3f0;
+      --line-strong: #b9c9dd;
+      --text: #172033;
+      --muted: #5d6b7d;
+      --primary: #2563eb;
+      --primary-strong: #1d4ed8;
+      --primary-soft: #e8f0ff;
+      --danger: #dc2626;
+      --warning: #b7791f;
+      --ok: #047857;
+      --shadow: 0 14px 30px rgba(23, 32, 51, 0.10);
+      --radius: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+    }
+
+    .app-shell {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .app-header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--line);
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+
+    .header-inner {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 14px 16px 10px;
+    }
+
+    .brand-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.18rem, 4vw, 1.75rem);
+      letter-spacing: 0;
+      color: #0f274d;
+    }
+
+    .counter-strip {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .count-pill {
+      min-width: 80px;
+      padding: 5px 8px;
+      background: var(--surface-2);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .tab-bar {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 6px;
+    }
+
+    .tab-button {
+      min-height: 42px;
+      padding: 8px 6px;
+      border-radius: var(--radius);
+      background: #edf3fb;
+      color: #263850;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: background .15s ease, color .15s ease, border-color .15s ease;
+    }
+
+    .tab-button.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary-strong);
+    }
+
+    .main {
+      width: 100%;
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 18px 16px 48px;
+    }
+
+    .view {
+      display: none;
+    }
+
+    .view.active {
+      display: block;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px;
+      margin-bottom: 16px;
+    }
+
+    .panel.slim {
+      box-shadow: none;
+    }
+
+    .section-title {
+      margin: 0 0 12px;
+      font-size: 1.05rem;
+      color: #1c3354;
+    }
+
+    .section-head {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .section-head .section-title {
+      margin: 0;
+    }
+
+    .grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .grid.two {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .grid.three {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    label {
+      display: grid;
+      gap: 5px;
+      font-size: 0.86rem;
+      font-weight: 700;
+      color: #263850;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius);
+      padding: 10px 11px;
+      background: #fff;
+      color: var(--text);
+      min-height: 42px;
+    }
+
+    textarea {
+      min-height: 140px;
+      resize: vertical;
+    }
+
+    .search-input {
+      min-height: 54px;
+      font-size: 1.1rem;
+      border: 2px solid #9db8e0;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-top: 12px;
+    }
+
+    .btn {
+      min-height: 42px;
+      padding: 10px 14px;
+      border-radius: var(--radius);
+      background: #e6eef8;
+      color: #24384f;
+      font-weight: 800;
+      cursor: pointer;
+      border: 1px solid #c9d8ea;
+    }
+
+    .btn.primary {
+      background: var(--primary);
+      border-color: var(--primary-strong);
+      color: #fff;
+    }
+
+    .btn.danger {
+      background: #fff1f2;
+      color: var(--danger);
+      border-color: #fecdd3;
+    }
+
+    .btn.ghost {
+      background: #fff;
+    }
+
+    .btn:disabled {
+      opacity: .55;
+      cursor: not-allowed;
+    }
+
+    .notice {
+      margin: 0 0 12px;
+      padding: 10px 12px;
+      border-radius: var(--radius);
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      color: #7c3d12;
+      font-size: 0.9rem;
+    }
+
+    .notice.info {
+      background: var(--primary-soft);
+      border-color: #bfdbfe;
+      color: #1e3a8a;
+    }
+
+    .notice.ok {
+      background: #ecfdf5;
+      border-color: #a7f3d0;
+      color: #065f46;
+    }
+
+    .status-line {
+      min-height: 24px;
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .status-line.error {
+      color: var(--danger);
+      font-weight: 700;
+    }
+
+    .card-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .log-card,
+    .teacher-card,
+    .draft-card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px;
+    }
+
+    .log-card {
+      display: grid;
+      gap: 10px;
+    }
+
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .card-title {
+      margin: 0;
+      font-size: 1.03rem;
+      color: #0f274d;
+    }
+
+    .meta-line {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 26px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #eef4fb;
+      border: 1px solid #d7e3f3;
+      color: #31455f;
+      font-size: 0.82rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .chip.ok {
+      background: #ecfdf5;
+      color: var(--ok);
+      border-color: #a7f3d0;
+    }
+
+    .chip.warn {
+      background: #fffbeb;
+      color: var(--warning);
+      border-color: #fde68a;
+    }
+
+    .chip.danger {
+      background: #fff1f2;
+      color: var(--danger);
+      border-color: #fecdd3;
+    }
+
+    .empty {
+      padding: 22px;
+      border: 1px dashed #b9c9dd;
+      border-radius: var(--radius);
+      color: var(--muted);
+      text-align: center;
+      background: rgba(255,255,255,.6);
+    }
+
+    .draft-grid {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      margin-top: 12px;
+    }
+
+    .match-box {
+      padding: 10px;
+      border-radius: var(--radius);
+      background: var(--surface-2);
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 0.87rem;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 760px;
+      font-size: 0.9rem;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid #e5edf7;
+      padding: 9px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #f4f8fd;
+      color: #283a51;
+      white-space: nowrap;
+    }
+
+    .code-box {
+      min-height: 180px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.82rem;
+      word-break: break-all;
+    }
+
+    .prompt-box {
+      min-height: 240px;
+      font-size: 0.88rem;
+    }
+
+    .footer {
+      margin-top: auto;
+      padding: 20px 16px;
+      color: var(--muted);
+      text-align: center;
+      font-size: 0.82rem;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 760px) {
+      .header-inner {
+        padding: 12px 10px 8px;
+      }
+
+      .brand-row {
+        align-items: flex-start;
+        margin-bottom: 10px;
+      }
+
+      .counter-strip {
+        justify-content: flex-start;
+        width: 100%;
+      }
+
+      .tab-bar {
+        overflow-x: auto;
+        display: flex;
+        padding-bottom: 3px;
+      }
+
+      .tab-button {
+        min-width: 92px;
+        flex: 0 0 auto;
+      }
+
+      .main {
+        padding: 12px 10px 38px;
+      }
+
+      .panel {
+        padding: 14px;
+      }
+
+      .grid.two,
+      .grid.three,
+      .draft-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .button-row {
+        align-items: stretch;
+      }
+
+      .btn {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="header-inner">
+        <div class="brand-row">
+          <h1>助っ人ログカンリくん</h1>
+          <div class="counter-strip" aria-live="polite">
+            <span class="count-pill" id="teacher-count">先生 0</span>
+            <span class="count-pill" id="log-count">ログ 0</span>
+          </div>
+        </div>
+        <nav class="tab-bar" aria-label="画面切り替え">
+          <button class="tab-button active" data-tab="search" type="button">探す</button>
+          <button class="tab-button" data-tab="import" type="button">取り込む</button>
+          <button class="tab-button" data-tab="logs" type="button">ログ一覧</button>
+          <button class="tab-button" data-tab="teachers" type="button">先生メモ</button>
+          <button class="tab-button" data-tab="backup" type="button">バックアップ</button>
+        </nav>
+      </div>
+    </header>
+
+    <main class="main">
+      <section class="view active" id="view-search">
+        <div class="panel">
+          <label>
+            検索
+            <input class="search-input" id="search-input" type="search" placeholder="水着ハスミ / 固有4 / A先生 / ビナー">
+          </label>
+          <div class="status-line" id="search-status"></div>
+        </div>
+        <div class="card-list" id="search-results"></div>
+      </section>
+
+      <section class="view" id="view-import">
+        <div class="panel">
+          <div class="section-head">
+            <h2 class="section-title">CSV取り込み</h2>
+            <button class="btn ghost" id="copy-prompt-button" type="button">プロンプトをコピー</button>
+          </div>
+          <p class="notice">
+            AIサービスにスクリーンショットを送る場合、画面内の先生名なども外部サービスへ送信されます。
+          </p>
+          <div class="grid three">
+            <label>
+              確認日
+              <input id="default-date" type="date">
+            </label>
+            <label>
+              コンテンツ
+              <select id="default-content">
+                <option value="総力戦">総力戦</option>
+                <option value="大決戦">大決戦</option>
+                <option value="制約解除決戦">制約解除決戦</option>
+                <option value="イベント">イベント</option>
+                <option value="その他">その他</option>
+              </select>
+            </label>
+            <label>
+              対象
+              <input id="default-target" type="text" placeholder="ビナー / ゴズ / 任意">
+            </label>
+          </div>
+          <label style="margin-top: 12px;">
+            Geminiなどが出力したCSV
+            <textarea id="csv-input" placeholder="確認日,コンテンツ,対象,先生名,区分,生徒名,固有レベル,メモ"></textarea>
+          </label>
+          <div class="button-row">
+            <button class="btn primary" id="parse-csv-button" type="button">プレビューする</button>
+            <button class="btn ghost" id="load-sample-button" type="button">サンプルを入れる</button>
+            <button class="btn ghost" id="clear-csv-button" type="button">入力を空にする</button>
+          </div>
+          <div class="status-line" id="import-status"></div>
+        </div>
+
+        <div class="panel hidden" id="prompt-panel">
+          <div class="section-head">
+            <h2 class="section-title">AI用プロンプト</h2>
+            <button class="btn ghost" id="hide-prompt-button" type="button">閉じる</button>
+          </div>
+          <textarea class="prompt-box" id="prompt-output" readonly></textarea>
+        </div>
+
+        <div class="panel hidden" id="draft-panel">
+          <div class="section-head">
+            <h2 class="section-title">取り込み前プレビュー</h2>
+            <span class="chip warn" id="draft-count">0件</span>
+          </div>
+          <div class="card-list" id="draft-list"></div>
+          <div class="button-row">
+            <button class="btn primary" id="save-drafts-button" type="button">確認した内容で保存</button>
+            <button class="btn ghost" id="discard-drafts-button" type="button">プレビューを破棄</button>
+          </div>
+          <div class="status-line" id="draft-status"></div>
+        </div>
+      </section>
+
+      <section class="view" id="view-logs">
+        <div class="panel slim">
+          <div class="section-head">
+            <h2 class="section-title">ログ一覧</h2>
+            <button class="btn ghost" id="sort-logs-button" type="button">新しい順</button>
+          </div>
+          <div class="card-list" id="log-list"></div>
+        </div>
+      </section>
+
+      <section class="view" id="view-teachers">
+        <div class="panel slim">
+          <div class="section-head">
+            <h2 class="section-title">先生メモ</h2>
+            <button class="btn ghost" id="refresh-teachers-button" type="button">更新</button>
+          </div>
+          <div class="card-list" id="teacher-list"></div>
+        </div>
+      </section>
+
+      <section class="view" id="view-backup">
+        <div class="panel">
+          <h2 class="section-title">ふっかつのじゅもん</h2>
+          <div class="button-row">
+            <button class="btn primary" id="generate-backup-button" type="button">バックアップコードを作る</button>
+            <button class="btn ghost" id="copy-backup-button" type="button">コードをコピー</button>
+          </div>
+          <label style="margin-top: 12px;">
+            バックアップコード
+            <textarea class="code-box" id="backup-code" placeholder="BA-SUKE-1:g:..." spellcheck="false"></textarea>
+          </label>
+          <div class="button-row">
+            <button class="btn primary" id="restore-backup-button" type="button">このコードから復元</button>
+            <button class="btn danger" id="reset-data-button" type="button">アプリ内データをリセット</button>
+          </div>
+          <div class="status-line" id="backup-status"></div>
+        </div>
+
+        <div class="panel">
+          <h2 class="section-title">スプレッドシート用CSV</h2>
+          <div class="button-row">
+            <button class="btn primary" id="generate-export-button" type="button">CSVを作る</button>
+            <button class="btn ghost" id="copy-export-button" type="button">CSVをコピー</button>
+          </div>
+          <textarea class="code-box" id="csv-export" readonly></textarea>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      非公式ファンツールです。入力内容はこの端末のブラウザ内に保存されます。
+    </footer>
+  </div>
+
+  <script>
+    (() => {
+      const STORAGE_KEY = "ba-suketto-state-v1";
+      const BACKUP_PREFIX = "BA-SUKE-1";
+      const STATUS_OPTIONS = ["未設定", "残す", "要確認", "入替候補", "外した"];
+      const SOURCE_OPTIONS = ["フレンド", "サークル", "不明"];
+      const UNIQUE_OPTIONS = ["不明", "固有なし", "固有1", "固有2", "固有3", "固有4"];
+      const CSV_HEADERS = ["確認日", "コンテンツ", "対象", "先生名", "区分", "生徒名", "固有レベル", "メモ"];
+
+      let state = loadState();
+      let drafts = [];
+      let logSortDesc = true;
+
+      const el = (id) => document.getElementById(id);
+
+      function todayString() {
+        const d = new Date();
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        return `${y}-${m}-${day}`;
+      }
+
+      function nowIso() {
+        return new Date().toISOString();
+      }
+
+      function makeId(prefix) {
+        if (crypto && crypto.randomUUID) return `${prefix}_${crypto.randomUUID()}`;
+        return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 9)}`;
+      }
+
+      function emptyState() {
+        return { version: 1, teachers: [], logs: [] };
+      }
+
+      function loadState() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return emptyState();
+          const parsed = JSON.parse(raw);
+          if (!parsed || !Array.isArray(parsed.teachers) || !Array.isArray(parsed.logs)) return emptyState();
+          return {
+            version: 1,
+            teachers: parsed.teachers,
+            logs: parsed.logs
+          };
+        } catch {
+          return emptyState();
+        }
+      }
+
+      function saveState() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        renderAll();
+      }
+
+      function normalizeName(value) {
+        return String(value || "")
+          .normalize("NFKC")
+          .trim()
+          .replace(/\s+/g, "")
+          .replace(/[・.．＿_\-‐ー―]+/g, "")
+          .replace(/(さん|先生)$/u, "")
+          .toLowerCase();
+      }
+
+      function allTeacherNames(teacher) {
+        return [
+          teacher.currentName,
+          ...(teacher.aliases || []),
+          ...(teacher.observedNames || [])
+        ].filter(Boolean);
+      }
+
+      function latestLogForTeacher(teacherId) {
+        return state.logs
+          .filter((log) => log.teacherId === teacherId)
+          .sort((a, b) => String(b.checkedDate || "").localeCompare(String(a.checkedDate || "")))[0];
+      }
+
+      function teacherLabel(teacher) {
+        const latest = latestLogForTeacher(teacher.id);
+        const parts = [];
+        if (latest?.source) parts.push(latest.source);
+        if (latest?.studentName) parts.push(latest.studentName);
+        if (latest?.checkedDate) parts.push(`最終確認 ${latest.checkedDate}`);
+        if (teacher.identityMemo && parts.length < 2) parts.push(teacher.identityMemo);
+        return `${teacher.currentName || "名前未設定"}${parts.length ? `（${parts.join(" / ")}）` : ""}`;
+      }
+
+      function levenshtein(a, b) {
+        const aa = Array.from(a);
+        const bb = Array.from(b);
+        const dp = Array.from({ length: aa.length + 1 }, () => Array(bb.length + 1).fill(0));
+        for (let i = 0; i <= aa.length; i++) dp[i][0] = i;
+        for (let j = 0; j <= bb.length; j++) dp[0][j] = j;
+        for (let i = 1; i <= aa.length; i++) {
+          for (let j = 1; j <= bb.length; j++) {
+            const cost = aa[i - 1] === bb[j - 1] ? 0 : 1;
+            dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
+          }
+        }
+        return dp[aa.length][bb.length];
+      }
+
+      function findTeacherMatches(name) {
+        const source = String(name || "").trim();
+        const normalized = normalizeName(source);
+        if (!source) return { type: "none", candidates: [] };
+
+        const exact = state.teachers.filter((teacher) => allTeacherNames(teacher).some((n) => n === source));
+        if (exact.length) return { type: "exact", candidates: exact };
+
+        const normalizedMatches = state.teachers.filter((teacher) => allTeacherNames(teacher).some((n) => normalizeName(n) === normalized));
+        if (normalizedMatches.length) return { type: "normalized", candidates: normalizedMatches };
+
+        const similar = state.teachers.filter((teacher) => {
+          return allTeacherNames(teacher).some((n) => {
+            const nn = normalizeName(n);
+            if (!nn || !normalized) return false;
+            if (nn.includes(normalized) || normalized.includes(nn)) return Math.min(nn.length, normalized.length) >= 2;
+            const limit = Math.max(nn.length, normalized.length) >= 5 ? 2 : 1;
+            return levenshtein(nn, normalized) <= limit;
+          });
+        });
+
+        return { type: similar.length ? "similar" : "none", candidates: similar.slice(0, 5) };
+      }
+
+      function parseCsv(text) {
+        const rows = [];
+        let row = [];
+        let cell = "";
+        let inQuotes = false;
+        const src = String(text || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+
+        for (let i = 0; i < src.length; i++) {
+          const ch = src[i];
+          const next = src[i + 1];
+          if (inQuotes) {
+            if (ch === '"' && next === '"') {
+              cell += '"';
+              i++;
+            } else if (ch === '"') {
+              inQuotes = false;
+            } else {
+              cell += ch;
+            }
+          } else {
+            if (ch === '"') {
+              inQuotes = true;
+            } else if (ch === ",") {
+              row.push(cell.trim());
+              cell = "";
+            } else if (ch === "\n") {
+              row.push(cell.trim());
+              if (row.some((v) => v !== "")) rows.push(row);
+              row = [];
+              cell = "";
+            } else {
+              cell += ch;
+            }
+          }
+        }
+
+        row.push(cell.trim());
+        if (row.some((v) => v !== "")) rows.push(row);
+        return rows;
+      }
+
+      function rowObjectFromCsv(rows) {
+        if (!rows.length) return [];
+        const first = rows[0].map((v) => v.replace(/^\uFEFF/, ""));
+        const hasHeader = first.some((v) => CSV_HEADERS.includes(v));
+        const headers = hasHeader ? first : CSV_HEADERS;
+        const body = hasHeader ? rows.slice(1) : rows;
+        return body.map((row) => {
+          const obj = {};
+          headers.forEach((header, i) => {
+            obj[header] = row[i] || "";
+          });
+          return obj;
+        });
+      }
+
+      function createDraftsFromCsv() {
+        const text = el("csv-input").value;
+        setStatus("import-status", "");
+        setStatus("draft-status", "");
+
+        let objects;
+        try {
+          objects = rowObjectFromCsv(parseCsv(text));
+        } catch (error) {
+          setStatus("import-status", "CSVを読み取れませんでした。", true);
+          return;
+        }
+
+        const defaults = {
+          checkedDate: el("default-date").value || todayString(),
+          content: el("default-content").value || "",
+          target: el("default-target").value || "",
+          source: "不明",
+          uniqueLevel: "不明"
+        };
+
+        drafts = objects.map((obj) => {
+          const teacherName = valueOf(obj, ["先生名", "teacher", "teacherName", "名前"]);
+          const studentName = valueOf(obj, ["生徒名", "student", "studentName", "キャラ", "キャラクター"]);
+          const normalized = {
+            checkedDate: valueOf(obj, ["確認日", "date", "checkedDate"]) || defaults.checkedDate,
+            content: valueOf(obj, ["コンテンツ", "content"]) || defaults.content,
+            target: valueOf(obj, ["対象", "ボス", "target", "boss"]) || defaults.target,
+            teacherName,
+            source: valueOf(obj, ["区分", "所属", "source"]) || defaults.source,
+            studentName,
+            uniqueLevel: normalizeUnique(valueOf(obj, ["固有レベル", "固有", "unique", "uniqueLevel"]) || defaults.uniqueLevel),
+            memo: valueOf(obj, ["メモ", "memo", "note"]) || ""
+          };
+          const match = findTeacherMatches(normalized.teacherName);
+          return {
+            draftId: makeId("draft"),
+            normalized,
+            match,
+            action: defaultActionForMatch(match)
+          };
+        }).filter((draft) => draft.normalized.teacherName || draft.normalized.studentName);
+
+        if (!drafts.length) {
+          el("draft-panel").classList.add("hidden");
+          setStatus("import-status", "取り込める行がありませんでした。", true);
+          return;
+        }
+
+        el("draft-panel").classList.remove("hidden");
+        renderDrafts();
+        setStatus("import-status", `${drafts.length}件をプレビューしました。`);
+      }
+
+      function valueOf(obj, keys) {
+        for (const key of keys) {
+          if (obj[key] != null && String(obj[key]).trim() !== "") return String(obj[key]).trim();
+        }
+        return "";
+      }
+
+      function normalizeUnique(value) {
+        const text = String(value || "").normalize("NFKC").trim();
+        if (!text) return "不明";
+        if (/固有\s*4|固有武器\s*4|星\s*4/i.test(text)) return "固有4";
+        if (/固有\s*3|固有武器\s*3/i.test(text)) return "固有3";
+        if (/固有\s*2|固有武器\s*2/i.test(text)) return "固有2";
+        if (/固有\s*1|固有武器\s*1/i.test(text)) return "固有1";
+        if (/なし|無|未/i.test(text)) return "固有なし";
+        return text;
+      }
+
+      function defaultActionForMatch(match) {
+        if (match.type === "exact" && match.candidates[0]) return `existing:${match.candidates[0].id}`;
+        if ((match.type === "normalized" || match.type === "similar") && match.candidates[0]) return `alias:${match.candidates[0].id}`;
+        return "new";
+      }
+
+      function renderDrafts() {
+        el("draft-count").textContent = `${drafts.length}件`;
+        const list = el("draft-list");
+        list.innerHTML = "";
+        drafts.forEach((draft, index) => {
+          const card = document.createElement("article");
+          card.className = "draft-card";
+          card.innerHTML = `
+            <div class="card-top">
+              <div>
+                <h3 class="card-title">取り込み候補 ${index + 1}</h3>
+                <div class="meta-line">${matchLabel(draft.match)}</div>
+              </div>
+              <span class="chip ${draft.match.type === "exact" ? "ok" : draft.match.type === "none" ? "" : "warn"}">${matchTypeText(draft.match.type)}</span>
+            </div>
+            <div class="draft-grid">
+              ${fieldHtml(index, "teacherName", "先生名", draft.normalized.teacherName)}
+              ${fieldHtml(index, "studentName", "生徒名", draft.normalized.studentName)}
+              ${fieldHtml(index, "checkedDate", "確認日", draft.normalized.checkedDate, "date")}
+              ${fieldHtml(index, "content", "コンテンツ", draft.normalized.content)}
+              ${fieldHtml(index, "target", "対象", draft.normalized.target)}
+              ${selectHtml(index, "source", "区分", draft.normalized.source, SOURCE_OPTIONS)}
+              ${selectHtml(index, "uniqueLevel", "固有レベル", draft.normalized.uniqueLevel, UNIQUE_OPTIONS, true)}
+              ${fieldHtml(index, "memo", "メモ", draft.normalized.memo)}
+            </div>
+            <div class="match-box">
+              <label>
+                紐づけ先
+                ${actionSelectHtml(index, draft)}
+              </label>
+            </div>
+          `;
+          list.appendChild(card);
+        });
+
+        list.querySelectorAll("[data-draft-field]").forEach((input) => {
+          const updateValue = (event) => {
+            const index = Number(event.target.dataset.draftIndex);
+            const field = event.target.dataset.draftField;
+            drafts[index].normalized[field] = event.target.value;
+          };
+          input.addEventListener("input", updateValue);
+          input.addEventListener("change", (event) => {
+            updateValue(event);
+            const index = Number(event.target.dataset.draftIndex);
+            const field = event.target.dataset.draftField;
+            if (field === "teacherName") {
+              drafts[index].match = findTeacherMatches(event.target.value);
+              drafts[index].action = defaultActionForMatch(drafts[index].match);
+              renderDrafts();
+            }
+          });
+        });
+
+        list.querySelectorAll("[data-draft-action]").forEach((select) => {
+          select.addEventListener("change", (event) => {
+            drafts[Number(event.target.dataset.draftAction)].action = event.target.value;
+          });
+        });
+      }
+
+      function fieldHtml(index, field, label, value, type = "text") {
+        return `
+          <label>
+            ${escapeHtml(label)}
+            <input type="${type}" value="${escapeAttr(value)}" data-draft-index="${index}" data-draft-field="${field}">
+          </label>
+        `;
+      }
+
+      function selectHtml(index, field, label, value, options, allowCustom = false) {
+        const current = options.includes(value) ? value : (allowCustom ? "__custom__" : value);
+        const optionHtml = options.map((option) => `<option value="${escapeAttr(option)}" ${option === current ? "selected" : ""}>${escapeHtml(option)}</option>`).join("");
+        const customOption = allowCustom && current === "__custom__" ? `<option value="${escapeAttr(value)}" selected>${escapeHtml(value)}</option>` : "";
+        return `
+          <label>
+            ${escapeHtml(label)}
+            <select data-draft-index="${index}" data-draft-field="${field}">
+              ${optionHtml}
+              ${customOption}
+            </select>
+          </label>
+        `;
+      }
+
+      function actionSelectHtml(index, draft) {
+        const options = [];
+        options.push(`<option value="new" ${draft.action === "new" ? "selected" : ""}>新しい先生として登録</option>`);
+        draft.match.candidates.forEach((teacher) => {
+          const existingValue = `existing:${teacher.id}`;
+          const aliasValue = `alias:${teacher.id}`;
+          options.push(`<option value="${existingValue}" ${draft.action === existingValue ? "selected" : ""}>${escapeHtml(teacherLabel(teacher))} に追加</option>`);
+          options.push(`<option value="${aliasValue}" ${draft.action === aliasValue ? "selected" : ""}>${escapeHtml(teacherLabel(teacher))} の別名として追加</option>`);
+        });
+        return `<select data-draft-action="${index}">${options.join("")}</select>`;
+      }
+
+      function matchTypeText(type) {
+        return {
+          exact: "完全一致",
+          normalized: "表記ゆれ候補",
+          similar: "似ている候補",
+          none: "新規候補"
+        }[type] || "候補なし";
+      }
+
+      function matchLabel(match) {
+        if (!match.candidates.length) return "既存先生の候補はありません。";
+        return match.candidates.map((teacher) => escapeHtml(teacherLabel(teacher))).join("<br>");
+      }
+
+      function saveDrafts() {
+        if (!drafts.length) {
+          setStatus("draft-status", "保存するプレビューがありません。", true);
+          return;
+        }
+
+        const duplicateWarnings = [];
+        drafts.forEach((draft) => {
+          const data = draft.normalized;
+          if (!data.teacherName || !data.studentName) return;
+          const teacher = resolveTeacherForDraft(draft);
+          const log = {
+            id: makeId("log"),
+            teacherId: teacher.id,
+            observedName: data.teacherName,
+            checkedDate: data.checkedDate || todayString(),
+            content: data.content || "",
+            target: data.target || "",
+            source: data.source || "不明",
+            studentName: data.studentName,
+            uniqueLevel: data.uniqueLevel || "不明",
+            memo: data.memo || "",
+            createdAt: nowIso(),
+            updatedAt: nowIso()
+          };
+          if (isDuplicateLog(log)) duplicateWarnings.push(`${teacher.currentName} / ${log.studentName}`);
+          state.logs.push(log);
+          touchTeacherFromLog(teacher, log);
+        });
+
+        drafts = [];
+        saveState();
+        el("draft-panel").classList.add("hidden");
+        el("csv-input").value = "";
+        const msg = duplicateWarnings.length
+          ? `保存しました。同じログの可能性があります: ${duplicateWarnings.join("、")}`
+          : "保存しました。";
+        setStatus("import-status", msg);
+        setActiveTab("search");
+      }
+
+      function resolveTeacherForDraft(draft) {
+        const [action, id] = String(draft.action || "new").split(":");
+        const name = draft.normalized.teacherName.trim();
+        const now = nowIso();
+        if ((action === "existing" || action === "alias") && id) {
+          const teacher = state.teachers.find((item) => item.id === id);
+          if (teacher) {
+            teacher.observedNames = addUnique(teacher.observedNames || [], name);
+            if (action === "alias" && name && !allTeacherNames(teacher).includes(name)) {
+              teacher.aliases = addUnique(teacher.aliases || [], name);
+            }
+            teacher.updatedAt = now;
+            return teacher;
+          }
+        }
+
+        const teacher = {
+          id: makeId("teacher"),
+          currentName: name || "名前未設定",
+          aliases: [],
+          observedNames: name ? [name] : [],
+          status: "未設定",
+          sourceHint: draft.normalized.source || "不明",
+          identityMemo: "",
+          keepReason: "",
+          note: "",
+          createdAt: now,
+          updatedAt: now
+        };
+        state.teachers.push(teacher);
+        return teacher;
+      }
+
+      function touchTeacherFromLog(teacher, log) {
+        teacher.sourceHint = teacher.sourceHint && teacher.sourceHint !== "不明" ? teacher.sourceHint : log.source;
+        teacher.observedNames = addUnique(teacher.observedNames || [], log.observedName);
+        teacher.updatedAt = nowIso();
+      }
+
+      function addUnique(list, value) {
+        const text = String(value || "").trim();
+        if (!text) return list;
+        return list.includes(text) ? list : [...list, text];
+      }
+
+      function isDuplicateLog(log) {
+        return state.logs.some((item) =>
+          item.teacherId === log.teacherId &&
+          item.checkedDate === log.checkedDate &&
+          item.content === log.content &&
+          item.target === log.target &&
+          item.studentName === log.studentName &&
+          item.uniqueLevel === log.uniqueLevel
+        );
+      }
+
+      function renderAll() {
+        el("teacher-count").textContent = `先生 ${state.teachers.length}`;
+        el("log-count").textContent = `ログ ${state.logs.length}`;
+        renderSearchResults();
+        renderLogs();
+        renderTeachers();
+      }
+
+      function renderSearchResults() {
+        const query = el("search-input").value.trim();
+        const list = el("search-results");
+        const logs = filterLogs(query);
+        el("search-status").textContent = query ? `${logs.length}件見つかりました。` : "検索語を入れるとログを絞り込めます。";
+        list.innerHTML = logs.length ? logs.map(renderLogCard).join("") : `<div class="empty">該当するログはありません。</div>`;
+      }
+
+      function filterLogs(query) {
+        const words = normalizeSearch(query).split(/\s+/).filter(Boolean);
+        let logs = [...state.logs].sort((a, b) => String(b.checkedDate || "").localeCompare(String(a.checkedDate || "")));
+        if (!words.length) return logs.slice(0, 20);
+        return logs.filter((log) => {
+          const teacher = state.teachers.find((item) => item.id === log.teacherId);
+          const haystack = normalizeSearch([
+            log.observedName,
+            log.checkedDate,
+            log.content,
+            log.target,
+            log.source,
+            log.studentName,
+            log.uniqueLevel,
+            log.memo,
+            teacher?.currentName,
+            ...(teacher?.aliases || []),
+            ...(teacher?.observedNames || []),
+            teacher?.status,
+            teacher?.identityMemo,
+            teacher?.keepReason,
+            teacher?.note
+          ].filter(Boolean).join(" "));
+          return words.every((word) => haystack.includes(word));
+        });
+      }
+
+      function normalizeSearch(value) {
+        return String(value || "").normalize("NFKC").toLowerCase();
+      }
+
+      function renderLogCard(log) {
+        const teacher = state.teachers.find((item) => item.id === log.teacherId);
+        const status = teacher?.status || "未設定";
+        return `
+          <article class="log-card">
+            <div class="card-top">
+              <div>
+                <h3 class="card-title">${escapeHtml(log.studentName || "生徒名なし")}</h3>
+                <div class="meta-line">
+                  <span>${escapeHtml(teacher?.currentName || log.observedName || "先生名なし")}</span>
+                  ${log.observedName && teacher?.currentName !== log.observedName ? `<span>読み取り名: ${escapeHtml(log.observedName)}</span>` : ""}
+                </div>
+              </div>
+              <span class="chip ${statusChipClass(status)}">${escapeHtml(status)}</span>
+            </div>
+            <div class="meta-line">
+              ${chip(log.uniqueLevel)}
+              ${chip(log.source)}
+              ${chip(log.content)}
+              ${chip(log.target)}
+              ${chip(log.checkedDate)}
+            </div>
+            ${log.memo ? `<div>${escapeHtml(log.memo)}</div>` : ""}
+            ${teacher?.identityMemo ? `<div class="meta-line">識別メモ: ${escapeHtml(teacher.identityMemo)}</div>` : ""}
+          </article>
+        `;
+      }
+
+      function chip(value) {
+        return value ? `<span class="chip">${escapeHtml(value)}</span>` : "";
+      }
+
+      function statusChipClass(status) {
+        if (status === "残す") return "ok";
+        if (status === "入替候補" || status === "外した") return "danger";
+        if (status === "要確認") return "warn";
+        return "";
+      }
+
+      function renderLogs() {
+        const logs = [...state.logs].sort((a, b) => {
+          const order = String(b.checkedDate || "").localeCompare(String(a.checkedDate || ""));
+          return logSortDesc ? order : -order;
+        });
+        const list = el("log-list");
+        list.innerHTML = logs.length ? logs.map(renderLogCard).join("") : `<div class="empty">保存済みログはまだありません。</div>`;
+      }
+
+      function renderTeachers() {
+        const list = el("teacher-list");
+        const teachers = [...state.teachers].sort((a, b) => (a.currentName || "").localeCompare(b.currentName || "", "ja"));
+        list.innerHTML = teachers.length ? teachers.map(renderTeacherCard).join("") : `<div class="empty">先生カードはまだありません。</div>`;
+
+        list.querySelectorAll("[data-teacher-field]").forEach((input) => {
+          input.addEventListener("change", updateTeacherFromInput);
+          input.addEventListener("blur", updateTeacherFromInput);
+        });
+      }
+
+      function renderTeacherCard(teacher) {
+        const logs = state.logs.filter((log) => log.teacherId === teacher.id)
+          .sort((a, b) => String(b.checkedDate || "").localeCompare(String(a.checkedDate || "")));
+        const latest = logs[0];
+        const aliases = [...new Set([...(teacher.aliases || []), ...(teacher.observedNames || [])])].filter((name) => name !== teacher.currentName);
+        return `
+          <article class="teacher-card">
+            <div class="card-top">
+              <div>
+                <h3 class="card-title">${escapeHtml(teacher.currentName || "名前未設定")}</h3>
+                <div class="meta-line">
+                  <span>${logs.length}ログ</span>
+                  ${latest ? `<span>最終確認 ${escapeHtml(latest.checkedDate || "")}</span>` : ""}
+                  ${latest?.studentName ? `<span>最近: ${escapeHtml(latest.studentName)}</span>` : ""}
+                </div>
+              </div>
+              <span class="chip ${statusChipClass(teacher.status)}">${escapeHtml(teacher.status || "未設定")}</span>
+            </div>
+            <div class="grid two" style="margin-top: 12px;">
+              <label>
+                現在名
+                <input value="${escapeAttr(teacher.currentName || "")}" data-teacher-id="${teacher.id}" data-teacher-field="currentName">
+              </label>
+              <label>
+                状態
+                <select data-teacher-id="${teacher.id}" data-teacher-field="status">
+                  ${STATUS_OPTIONS.map((option) => `<option value="${option}" ${option === teacher.status ? "selected" : ""}>${option}</option>`).join("")}
+                </select>
+              </label>
+              <label>
+                識別メモ
+                <input value="${escapeAttr(teacher.identityMemo || "")}" data-teacher-id="${teacher.id}" data-teacher-field="identityMemo" placeholder="サークル / ミカの人">
+              </label>
+              <label>
+                残す理由
+                <input value="${escapeAttr(teacher.keepReason || "")}" data-teacher-id="${teacher.id}" data-teacher-field="keepReason">
+              </label>
+            </div>
+            <label style="margin-top: 10px;">
+              メモ
+              <textarea data-teacher-id="${teacher.id}" data-teacher-field="note">${escapeHtml(teacher.note || "")}</textarea>
+            </label>
+            <div class="meta-line" style="margin-top: 10px;">
+              ${aliases.map((name) => `<span class="chip">${escapeHtml(name)}</span>`).join("")}
+            </div>
+          </article>
+        `;
+      }
+
+      function updateTeacherFromInput(event) {
+        const id = event.target.dataset.teacherId;
+        const field = event.target.dataset.teacherField;
+        const teacher = state.teachers.find((item) => item.id === id);
+        if (!teacher || !field) return;
+        teacher[field] = event.target.value;
+        if (field === "currentName") {
+          teacher.observedNames = addUnique(teacher.observedNames || [], event.target.value);
+        }
+        teacher.updatedAt = nowIso();
+        saveState();
+      }
+
+      async function generateBackupCode() {
+        const payload = compactForBackup(state);
+        const json = JSON.stringify(payload);
+        try {
+          if ("CompressionStream" in window) {
+            const bytes = new TextEncoder().encode(json);
+            const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream("gzip"));
+            const compressed = new Uint8Array(await new Response(stream).arrayBuffer());
+            return `${BACKUP_PREFIX}:g:${base64UrlFromBytes(compressed)}`;
+          }
+        } catch {
+          // fallback below
+        }
+        return `${BACKUP_PREFIX}:j:${base64UrlFromBytes(new TextEncoder().encode(json))}`;
+      }
+
+      async function restoreBackupCode(code) {
+        const text = String(code || "").trim();
+        const parts = text.split(":");
+        if (parts.length !== 3 || parts[0] !== BACKUP_PREFIX) throw new Error("バックアップコードの形式が違います。");
+        const mode = parts[1];
+        const bytes = bytesFromBase64Url(parts[2]);
+        let json;
+        if (mode === "g") {
+          if (!("DecompressionStream" in window)) throw new Error("このブラウザでは圧縮コードを復元できません。");
+          const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
+          json = await new Response(stream).text();
+        } else if (mode === "j") {
+          json = new TextDecoder().decode(bytes);
+        } else {
+          throw new Error("バックアップコードの種類が不明です。");
+        }
+        const restored = expandFromBackup(JSON.parse(json));
+        if (!Array.isArray(restored.teachers) || !Array.isArray(restored.logs)) throw new Error("復元データが壊れています。");
+        state = restored;
+        saveState();
+      }
+
+      function compactForBackup(data) {
+        return {
+          v: 1,
+          t: data.teachers.map((teacher) => ({
+            i: teacher.id,
+            n: teacher.currentName,
+            a: teacher.aliases || [],
+            o: teacher.observedNames || [],
+            s: teacher.status || "未設定",
+            h: teacher.sourceHint || "",
+            m: teacher.identityMemo || "",
+            k: teacher.keepReason || "",
+            x: teacher.note || "",
+            c: teacher.createdAt || "",
+            u: teacher.updatedAt || ""
+          })),
+          l: data.logs.map((log) => ({
+            i: log.id,
+            t: log.teacherId,
+            n: log.observedName,
+            d: log.checkedDate,
+            c: log.content,
+            b: log.target,
+            s: log.source,
+            p: log.studentName,
+            u: log.uniqueLevel,
+            m: log.memo,
+            r: log.createdAt || "",
+            e: log.updatedAt || ""
+          }))
+        };
+      }
+
+      function expandFromBackup(data) {
+        return {
+          version: 1,
+          teachers: (data.t || []).map((teacher) => ({
+            id: teacher.i,
+            currentName: teacher.n,
+            aliases: teacher.a || [],
+            observedNames: teacher.o || [],
+            status: teacher.s || "未設定",
+            sourceHint: teacher.h || "不明",
+            identityMemo: teacher.m || "",
+            keepReason: teacher.k || "",
+            note: teacher.x || "",
+            createdAt: teacher.c || nowIso(),
+            updatedAt: teacher.u || nowIso()
+          })),
+          logs: (data.l || []).map((log) => ({
+            id: log.i,
+            teacherId: log.t,
+            observedName: log.n,
+            checkedDate: log.d,
+            content: log.c,
+            target: log.b,
+            source: log.s,
+            studentName: log.p,
+            uniqueLevel: log.u,
+            memo: log.m,
+            createdAt: log.r || nowIso(),
+            updatedAt: log.e || nowIso()
+          }))
+        };
+      }
+
+      function base64UrlFromBytes(bytes) {
+        let binary = "";
+        const chunk = 0x8000;
+        for (let i = 0; i < bytes.length; i += chunk) {
+          binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+        }
+        return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+      }
+
+      function bytesFromBase64Url(value) {
+        const padded = value.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((value.length + 3) % 4);
+        const binary = atob(padded);
+        return Uint8Array.from(binary, (ch) => ch.charCodeAt(0));
+      }
+
+      function exportCsv() {
+        const rows = [[
+          "先生ID", "現在名", "読み取り名", "確認日", "コンテンツ", "対象", "区分", "生徒名", "固有レベル", "先生状態", "識別メモ", "ログメモ"
+        ]];
+        state.logs.forEach((log) => {
+          const teacher = state.teachers.find((item) => item.id === log.teacherId);
+          rows.push([
+            log.teacherId,
+            teacher?.currentName || "",
+            log.observedName || "",
+            log.checkedDate || "",
+            log.content || "",
+            log.target || "",
+            log.source || "",
+            log.studentName || "",
+            log.uniqueLevel || "",
+            teacher?.status || "",
+            teacher?.identityMemo || "",
+            log.memo || ""
+          ]);
+        });
+        return rows.map((row) => row.map(csvCell).join(",")).join("\n");
+      }
+
+      function csvCell(value) {
+        const text = String(value ?? "");
+        return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+      }
+
+      function generatePrompt() {
+        const date = el("default-date").value || todayString();
+        const content = el("default-content").value || "総力戦";
+        const target = el("default-target").value || "対象未入力";
+        return `添付したゲーム「ブルーアーカイブ」の助っ人画面スクリーンショットから、助っ人情報をCSVで出力してください。
+
+出力列は必ず次の順番にしてください。
+確認日,コンテンツ,対象,先生名,区分,生徒名,固有レベル,メモ
+
+共通値:
+確認日: ${date}
+コンテンツ: ${content}
+対象: ${target}
+
+読み取りルール:
+1. 先生名、生徒名、固有レベル、フレンド/サークル区分を読み取ってください。
+2. 区分は、握手のようなアイコンがあれば「フレンド」、旗のようなアイコンがあれば「サークル」としてください。
+3. 固有レベルは、画像内で確認できる範囲で「固有なし」「固有1」「固有2」「固有3」「固有4」「不明」のいずれかにしてください。
+4. 読み取れない項目は「不明」または空欄にしてください。
+5. 推測で断定しすぎず、怪しい場合はメモ列に「要確認」と入れてください。
+6. 余計な説明、Markdown、コードブロックは不要です。
+7. CSV本文だけを出力してください。`;
+      }
+
+      async function copyText(text, statusId, successMessage) {
+        try {
+          await navigator.clipboard.writeText(text);
+          setStatus(statusId, successMessage);
+        } catch {
+          setStatus(statusId, "コピーできませんでした。手動で選択してください。", true);
+        }
+      }
+
+      function setStatus(id, message, isError = false) {
+        const node = el(id);
+        if (!node) return;
+        node.textContent = message || "";
+        node.classList.toggle("error", Boolean(isError));
+      }
+
+      function setActiveTab(tab) {
+        document.querySelectorAll(".tab-button").forEach((button) => {
+          button.classList.toggle("active", button.dataset.tab === tab);
+        });
+        document.querySelectorAll(".view").forEach((view) => {
+          view.classList.toggle("active", view.id === `view-${tab}`);
+        });
+      }
+
+      function escapeHtml(value) {
+        return String(value ?? "").replace(/[&<>"']/g, (ch) => ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;"
+        }[ch]));
+      }
+
+      function escapeAttr(value) {
+        return escapeHtml(value).replace(/`/g, "&#96;");
+      }
+
+      function bindEvents() {
+        document.querySelectorAll(".tab-button").forEach((button) => {
+          button.addEventListener("click", () => setActiveTab(button.dataset.tab));
+        });
+
+        el("search-input").addEventListener("input", renderSearchResults);
+        el("parse-csv-button").addEventListener("click", createDraftsFromCsv);
+        el("load-sample-button").addEventListener("click", () => {
+          el("csv-input").value = `確認日,コンテンツ,対象,先生名,区分,生徒名,固有レベル,メモ
+${todayString()},総力戦,ビナー,A先生,フレンド,水着ハスミ,固有4,火力高め
+${todayString()},総力戦,ビナー,B先生,サークル,ミカ,固有3,前回借りた候補`;
+        });
+        el("clear-csv-button").addEventListener("click", () => {
+          el("csv-input").value = "";
+          setStatus("import-status", "");
+        });
+        el("save-drafts-button").addEventListener("click", saveDrafts);
+        el("discard-drafts-button").addEventListener("click", () => {
+          drafts = [];
+          el("draft-panel").classList.add("hidden");
+          setStatus("draft-status", "");
+        });
+        el("copy-prompt-button").addEventListener("click", async () => {
+          const prompt = generatePrompt();
+          el("prompt-output").value = prompt;
+          el("prompt-panel").classList.remove("hidden");
+          await copyText(prompt, "import-status", "プロンプトをコピーしました。");
+        });
+        el("hide-prompt-button").addEventListener("click", () => el("prompt-panel").classList.add("hidden"));
+        el("sort-logs-button").addEventListener("click", () => {
+          logSortDesc = !logSortDesc;
+          el("sort-logs-button").textContent = logSortDesc ? "新しい順" : "古い順";
+          renderLogs();
+        });
+        el("refresh-teachers-button").addEventListener("click", renderTeachers);
+        el("generate-backup-button").addEventListener("click", async () => {
+          const code = await generateBackupCode();
+          el("backup-code").value = code;
+          setStatus("backup-status", `バックアップコードを作りました。${code.length}文字です。`);
+        });
+        el("copy-backup-button").addEventListener("click", () => copyText(el("backup-code").value, "backup-status", "バックアップコードをコピーしました。"));
+        el("restore-backup-button").addEventListener("click", async () => {
+          if (!confirm("現在のアプリ内データを、バックアップコードの内容で置き換えます。")) return;
+          try {
+            await restoreBackupCode(el("backup-code").value);
+            setStatus("backup-status", "復元しました。");
+          } catch (error) {
+            setStatus("backup-status", error.message || "復元できませんでした。", true);
+          }
+        });
+        el("reset-data-button").addEventListener("click", () => {
+          if (!confirm("アプリ内データをすべて削除します。バックアップコードがない場合は復元できません。")) return;
+          state = emptyState();
+          localStorage.removeItem(STORAGE_KEY);
+          renderAll();
+          setStatus("backup-status", "リセットしました。");
+        });
+        el("generate-export-button").addEventListener("click", () => {
+          el("csv-export").value = exportCsv();
+        });
+        el("copy-export-button").addEventListener("click", () => copyText(el("csv-export").value, "backup-status", "CSVをコピーしました。"));
+      }
+
+      function init() {
+        el("default-date").value = todayString();
+        bindEvents();
+        renderAll();
+      }
+
+      init();
+    })();
+  </script>
+</body>
+</html>
