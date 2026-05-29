@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>助っ人ログカンリくん</title>
-  <meta name="description" content="ブルーアーカイブの助っ人スクリーンショットを外部AIでCSV化し、あとから検索できるログとして管理する非公式ファンツールです。">
+  <title>助っ人 オボエルくん</title>
+  <meta name="description" content="助っ人 オボエルくんは、ブルーアーカイブの助っ人スクリーンショットを外部AIでCSV化し、あとから検索できるログとして管理する非公式ファンツールです。">
   <meta name="robots" content="noindex,nofollow">
   <meta name="theme-color" content="#2563eb">
   <style>
@@ -677,7 +677,7 @@
     <header class="app-header">
       <div class="header-inner">
         <div class="brand-row">
-          <h1>助っ人ログカンリくん</h1>
+          <h1>助っ人 オボエルくん</h1>
           <div class="counter-strip" aria-live="polite">
             <span class="count-pill" id="teacher-count">先生 0</span>
             <span class="count-pill" id="log-count">ログ 0</span>
@@ -1407,7 +1407,6 @@
               ${editableLogChip(log, "target", log.target)}
               ${editableLogChip(log, "checkedDate", log.checkedDate)}
             </div>
-            ${log.memo ? `<div>${escapeHtml(log.memo)}</div>` : ""}
             ${renderInlineLogFieldEditor(log)}
             ${editingLogId === log.id ? renderLogEditor(log) : ""}
           </article>
@@ -1584,7 +1583,6 @@
           .sort((a, b) => String(b.checkedDate || "").localeCompare(String(a.checkedDate || "")));
         const latest = logs[0];
         const aliases = [...new Set([...(teacher.aliases || []), ...(teacher.observedNames || [])])].filter((name) => name !== teacher.currentName);
-        const statusChip = teacher.status ? `<span class="chip ${statusChipClass(teacher.status)}">${escapeHtml(teacher.status)}</span>` : "";
         return `
           <article class="teacher-card">
             <div class="card-top">
@@ -1595,20 +1593,14 @@
                   ${latest ? `<span>最終確認 ${escapeHtml(latest.checkedDate || "")}</span>` : ""}
                   ${latest?.studentName ? `<span>最近: ${escapeHtml(latest.studentName)}</span>` : ""}
                   ${teacherSourceButtonsHtml(teacher)}
+                  ${teacherStatusButtonHtml(teacher)}
                 </div>
               </div>
               <div class="card-actions">
-                ${statusChip}
                 <button class="btn danger mini" type="button" data-delete-teacher="${teacher.id}">削除</button>
               </div>
             </div>
-            <div class="grid two" style="margin-top: 12px;">
-              <label>
-                状態
-                <select data-teacher-id="${teacher.id}" data-teacher-field="status">
-                  ${STATUS_OPTIONS.map((option) => `<option value="${option}" ${option === teacher.status ? "selected" : ""}>${option}</option>`).join("")}
-                </select>
-              </label>
+            <div class="grid" style="margin-top: 12px;">
               <label>
                 メモ
                 <input value="${escapeAttr(teacher.note || "")}" data-teacher-id="${teacher.id}" data-teacher-field="note">
@@ -1637,6 +1629,11 @@
           `;
         }
         return `<h3 class="card-title"><button class="title-button" type="button" data-edit-teacher-name="${escapeAttr(teacher.id)}">${escapeHtml(teacher.currentName || "名前未設定")}</button></h3>`;
+      }
+
+      function teacherStatusButtonHtml(teacher) {
+        const status = normalizeStatusValue(teacher.status);
+        return `<button class="chip chip-button ${statusChipClass(status)}" type="button" data-cycle-teacher-status="${escapeAttr(teacher.id)}" aria-label="先生状態を変更">${escapeHtml(status)}</button>`;
       }
 
       function teacherSourceButtonsHtml(teacher) {
@@ -1685,6 +1682,16 @@
         if (!teacher) return;
         const next = normalizeSourceValue(source);
         teacher.sourceHint = teacher.sourceHint === next ? "不明" : next;
+        teacher.updatedAt = nowIso();
+        saveState();
+      }
+
+      function cycleTeacherStatus(teacherId) {
+        const teacher = state.teachers.find((item) => item.id === teacherId);
+        if (!teacher) return;
+        const current = normalizeStatusValue(teacher.status);
+        const index = STATUS_OPTIONS.indexOf(current);
+        teacher.status = STATUS_OPTIONS[(index + 1) % STATUS_OPTIONS.length];
         teacher.updatedAt = nowIso();
         saveState();
       }
@@ -2172,6 +2179,11 @@
           const sourceButton = event.target.closest("[data-teacher-source]");
           if (sourceButton) {
             updateTeacherSource(sourceButton.dataset.teacherId, sourceButton.dataset.teacherSource);
+            return;
+          }
+          const statusButton = event.target.closest("[data-cycle-teacher-status]");
+          if (statusButton) {
+            cycleTeacherStatus(statusButton.dataset.cycleTeacherStatus);
             return;
           }
           const button = event.target.closest("[data-delete-teacher]");
