@@ -443,6 +443,19 @@
       border-color: #fecdd3;
     }
 
+    .chip.dark {
+      background: #111827;
+      color: #fff;
+      border-color: #111827;
+    }
+
+    .chip.dark.chip-button:hover,
+    .chip.dark.chip-button:focus-visible {
+      background: #111827;
+      color: #fff;
+      border-color: #4b5563;
+    }
+
     .empty {
       padding: 22px;
       border: 1px dashed #b9c9dd;
@@ -1415,7 +1428,8 @@
 
       function editableLogChip(log, field, value) {
         if (!value) return "";
-        return `<button class="chip chip-button" type="button" data-edit-log-field="${escapeAttr(field)}" data-log-id="${escapeAttr(log.id)}">${escapeHtml(value)}</button>`;
+        const label = field === "uniqueLevel" && normalizeUnique(value) === "不明" ? "固有レベル：不明" : value;
+        return `<button class="chip chip-button" type="button" data-edit-log-field="${escapeAttr(field)}" data-log-id="${escapeAttr(log.id)}">${escapeHtml(label)}</button>`;
       }
 
       function renderInlineLogFieldEditor(log) {
@@ -1526,7 +1540,8 @@
 
       function statusChipClass(status) {
         if (status === "残す") return "ok";
-        if (status === "入替候補" || status === "外した") return "danger";
+        if (status === "外した") return "dark";
+        if (status === "入替候補") return "danger";
         if (status === "要確認") return "warn";
         return "";
       }
