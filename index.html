@@ -106,7 +106,7 @@
 
     .tab-bar {
       display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 6px;
     }
 
@@ -254,6 +254,12 @@
       background: #fff;
     }
 
+    .btn.small {
+      min-height: 36px;
+      padding: 7px 10px;
+      font-size: 0.84rem;
+    }
+
     .btn:disabled {
       opacity: .55;
       cursor: not-allowed;
@@ -296,6 +302,13 @@
     .card-list {
       display: grid;
       gap: 12px;
+    }
+
+    .filter-panel {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: 1.5fr 1fr 1fr;
+      margin-bottom: 14px;
     }
 
     .log-card,
@@ -380,6 +393,106 @@
       gap: 10px;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       margin-top: 12px;
+    }
+
+    .log-editor {
+      display: grid;
+      gap: 12px;
+      margin-top: 4px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface-2);
+    }
+
+    .field-label {
+      font-size: 0.86rem;
+      font-weight: 700;
+      color: #263850;
+    }
+
+    .source-control {
+      display: grid;
+      gap: 5px;
+    }
+
+    .source-button-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .source-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 42px;
+      padding: 8px 11px;
+      border-radius: var(--radius);
+      border: 1px solid var(--line-strong);
+      background: #fff;
+      color: #263850;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .source-button.active {
+      color: #fff;
+      background: var(--primary);
+      border-color: var(--primary-strong);
+    }
+
+    .source-icon {
+      position: relative;
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      flex: 0 0 auto;
+      color: currentColor;
+    }
+
+    .source-icon.flag::before {
+      content: "";
+      position: absolute;
+      left: 4px;
+      top: 2px;
+      width: 2px;
+      height: 14px;
+      background: currentColor;
+      border-radius: 2px;
+    }
+
+    .source-icon.flag::after {
+      content: "";
+      position: absolute;
+      left: 6px;
+      top: 3px;
+      width: 10px;
+      height: 7px;
+      background: currentColor;
+      clip-path: polygon(0 0, 100% 0, 72% 50%, 100% 100%, 0 100%);
+      border-radius: 1px;
+    }
+
+    .source-icon.handshake::before,
+    .source-icon.handshake::after {
+      content: "";
+      position: absolute;
+      top: 7px;
+      width: 12px;
+      height: 5px;
+      border: 2px solid currentColor;
+      border-radius: 999px;
+    }
+
+    .source-icon.handshake::before {
+      left: 0;
+      transform: rotate(28deg);
+    }
+
+    .source-icon.handshake::after {
+      right: 0;
+      transform: rotate(-28deg);
     }
 
     .match-box {
@@ -479,6 +592,7 @@
 
       .grid.two,
       .grid.three,
+      .filter-panel,
       .draft-grid {
         grid-template-columns: 1fr;
       }
@@ -563,7 +677,6 @@
           </label>
           <div class="button-row">
             <button class="btn primary" id="parse-csv-button" type="button">プレビューする</button>
-            <button class="btn ghost" id="load-sample-button" type="button">サンプルを入れる</button>
             <button class="btn ghost" id="clear-csv-button" type="button">入力を空にする</button>
           </div>
           <div class="status-line" id="import-status"></div>
@@ -589,6 +702,33 @@
             <h2 class="section-title">先生メモ</h2>
             <button class="btn ghost" id="refresh-teachers-button" type="button">更新</button>
           </div>
+          <div class="filter-panel">
+            <label>
+              先生を探す
+              <input id="teacher-search-input" type="search" placeholder="先生名 / 生徒名 / メモ">
+            </label>
+            <label>
+              状態
+              <select id="teacher-status-filter">
+                <option value="all">すべて</option>
+                <option value="未設定">未設定</option>
+                <option value="残す">残す</option>
+                <option value="要確認">要確認</option>
+                <option value="入替候補">入替候補</option>
+                <option value="外した">外した</option>
+              </select>
+            </label>
+            <label>
+              区分
+              <select id="teacher-source-filter">
+                <option value="all">すべて</option>
+                <option value="フレンド">フレンド</option>
+                <option value="サークル">サークル</option>
+                <option value="不明">不明</option>
+              </select>
+            </label>
+          </div>
+          <div class="status-line" id="teacher-filter-status"></div>
           <div class="card-list" id="teacher-list"></div>
         </div>
       </section>
@@ -613,11 +753,16 @@
 
         <div class="panel">
           <h2 class="section-title">スプレッドシート用CSV</h2>
+          <p class="notice info">
+            先生内部IDは、同じ名前の別人を区別して復元するための番号です。編集しなくて大丈夫です。
+          </p>
           <div class="button-row">
             <button class="btn primary" id="generate-export-button" type="button">CSVを作る</button>
             <button class="btn ghost" id="copy-export-button" type="button">CSVをコピー</button>
+            <button class="btn danger" id="restore-csv-button" type="button">このCSVから復元する</button>
           </div>
-          <textarea class="code-box" id="csv-export" readonly></textarea>
+          <textarea class="code-box" id="csv-export" spellcheck="false"></textarea>
+          <div class="status-line" id="csv-status"></div>
         </div>
       </section>
     </main>
@@ -638,6 +783,7 @@
 
       let state = loadState();
       let drafts = [];
+      let editingLogId = "";
 
       const el = (id) => document.getElementById(id);
 
@@ -681,6 +827,10 @@
       function migrateState(data) {
         data.teachers = data.teachers.map((teacher) => ({
           ...teacher,
+          aliases: Array.isArray(teacher.aliases) ? teacher.aliases : [],
+          observedNames: Array.isArray(teacher.observedNames) ? teacher.observedNames : [],
+          status: teacher.status || "未設定",
+          sourceHint: teacher.sourceHint || "不明",
           note: teacher.note || teacher.keepReason || "",
           keepReason: ""
         }));
@@ -719,7 +869,8 @@
       function teacherLabel(teacher) {
         const latest = latestLogForTeacher(teacher.id);
         const parts = [];
-        if (latest?.source) parts.push(latest.source);
+        if (teacher.sourceHint && teacher.sourceHint !== "不明") parts.push(teacher.sourceHint);
+        else if (latest?.source) parts.push(latest.source);
         if (latest?.studentName) parts.push(latest.studentName);
         if (latest?.checkedDate) parts.push(`最終確認 ${latest.checkedDate}`);
         if (teacher.identityMemo && parts.length < 2) parts.push(teacher.identityMemo);
@@ -850,7 +1001,7 @@
             content: valueOf(obj, ["コンテンツ", "content"]) || defaults.content,
             target: valueOf(obj, ["対象", "ボス", "target", "boss"]) || defaults.target,
             teacherName,
-            source: valueOf(obj, ["区分", "所属", "source"]) || defaults.source,
+            source: normalizeSourceValue(valueOf(obj, ["区分", "所属", "source"]) || defaults.source),
             studentName,
             uniqueLevel: normalizeUnique(valueOf(obj, ["固有レベル", "固有", "unique", "uniqueLevel"]) || defaults.uniqueLevel),
             memo: valueOf(obj, ["メモ", "memo", "note"]) || ""
@@ -891,6 +1042,18 @@
         if (/固有\s*1|固有武器\s*1/i.test(text)) return "固有1";
         if (/なし|無|未/i.test(text)) return "固有なし";
         return text;
+      }
+
+      function normalizeSourceValue(value) {
+        const text = String(value || "").normalize("NFKC").trim();
+        if (/フレンド|friend/i.test(text)) return "フレンド";
+        if (/サークル|circle/i.test(text)) return "サークル";
+        return text || "不明";
+      }
+
+      function normalizeStatusValue(value) {
+        const text = String(value || "").trim();
+        return STATUS_OPTIONS.includes(text) ? text : "未設定";
       }
 
       function defaultActionForMatch(match) {
@@ -1140,6 +1303,7 @@
             ...(teacher?.aliases || []),
             ...(teacher?.observedNames || []),
             teacher?.status,
+            teacher?.sourceHint,
             teacher?.identityMemo,
             teacher?.note
           ].filter(Boolean).join(" "));
@@ -1176,10 +1340,77 @@
             ${log.memo ? `<div>${escapeHtml(log.memo)}</div>` : ""}
             ${teacher?.identityMemo ? `<div class="meta-line">識別メモ: ${escapeHtml(teacher.identityMemo)}</div>` : ""}
             <div class="button-row">
+              <button class="btn ghost small" type="button" data-edit-log="${log.id}">このログを編集</button>
               <button class="btn danger" type="button" data-delete-log="${log.id}">このログを削除</button>
             </div>
+            ${editingLogId === log.id ? renderLogEditor(log) : ""}
           </article>
         `;
+      }
+
+      function renderLogEditor(log) {
+        return `
+          <div class="log-editor" data-log-editor="${escapeAttr(log.id)}">
+            <div class="grid two">
+              <label>
+                紐づけ先
+                <select data-log-edit-field="teacherId">
+                  ${teacherOptionsForLog(log)}
+                  <option value="__new__">新しい先生カードに分ける</option>
+                </select>
+              </label>
+              <label>
+                読み取り名
+                <input value="${escapeAttr(log.observedName || "")}" data-log-edit-field="observedName">
+              </label>
+              <label>
+                生徒名
+                <input value="${escapeAttr(log.studentName || "")}" data-log-edit-field="studentName">
+              </label>
+              <label>
+                固有レベル
+                ${logEditSelectHtml("uniqueLevel", log.uniqueLevel || "不明", UNIQUE_OPTIONS, true)}
+              </label>
+              <label>
+                区分
+                ${logEditSelectHtml("source", log.source || "不明", SOURCE_OPTIONS)}
+              </label>
+              <label>
+                確認日
+                <input type="date" value="${escapeAttr(log.checkedDate || "")}" data-log-edit-field="checkedDate">
+              </label>
+              <label>
+                コンテンツ
+                <input value="${escapeAttr(log.content || "")}" data-log-edit-field="content">
+              </label>
+              <label>
+                対象
+                <input value="${escapeAttr(log.target || "")}" data-log-edit-field="target">
+              </label>
+              <label style="grid-column: 1 / -1;">
+                メモ
+                <input value="${escapeAttr(log.memo || "")}" data-log-edit-field="memo">
+              </label>
+            </div>
+            <div class="button-row">
+              <button class="btn primary small" type="button" data-save-log-edit="${log.id}">保存する</button>
+              <button class="btn ghost small" type="button" data-cancel-log-edit>キャンセル</button>
+            </div>
+          </div>
+        `;
+      }
+
+      function teacherOptionsForLog(log) {
+        return state.teachers
+          .map((teacher) => `<option value="${escapeAttr(teacher.id)}" ${teacher.id === log.teacherId ? "selected" : ""}>${escapeHtml(teacherLabel(teacher))}</option>`)
+          .join("");
+      }
+
+      function logEditSelectHtml(field, value, options, allowCustom = false) {
+        const current = options.includes(value) ? value : (allowCustom ? "__custom__" : value);
+        const optionHtml = options.map((option) => `<option value="${escapeAttr(option)}" ${option === current ? "selected" : ""}>${escapeHtml(option)}</option>`).join("");
+        const customOption = allowCustom && current === "__custom__" ? `<option value="${escapeAttr(value)}" selected>${escapeHtml(value)}</option>` : "";
+        return `<select data-log-edit-field="${field}">${optionHtml}${customOption}</select>`;
       }
 
       function chip(value) {
@@ -1195,13 +1426,50 @@
 
       function renderTeachers() {
         const list = el("teacher-list");
-        const teachers = [...state.teachers].sort((a, b) => (a.currentName || "").localeCompare(b.currentName || "", "ja"));
-        list.innerHTML = teachers.length ? teachers.map(renderTeacherCard).join("") : `<div class="empty">先生カードはまだありません。</div>`;
+        const teachers = filteredTeachers();
+        setStatus("teacher-filter-status", `${teachers.length}件表示中`);
+        list.innerHTML = teachers.length ? teachers.map(renderTeacherCard).join("") : `<div class="empty">${state.teachers.length ? "条件に合う先生カードはありません。" : "先生カードはまだありません。"}</div>`;
 
         list.querySelectorAll("[data-teacher-field]").forEach((input) => {
           input.addEventListener("change", updateTeacherFromInput);
           input.addEventListener("blur", updateTeacherFromInput);
         });
+      }
+
+      function filteredTeachers() {
+        const query = el("teacher-search-input")?.value.trim() || "";
+        const status = el("teacher-status-filter")?.value || "all";
+        const source = el("teacher-source-filter")?.value || "all";
+        const words = normalizeSearch(query).split(/\s+/).filter(Boolean);
+
+        return [...state.teachers]
+          .filter((teacher) => status === "all" || (teacher.status || "未設定") === status)
+          .filter((teacher) => source === "all" || (teacher.sourceHint || "不明") === source)
+          .filter((teacher) => {
+            if (!words.length) return true;
+            const logs = state.logs.filter((log) => log.teacherId === teacher.id);
+            const haystack = normalizeSearch([
+              teacher.currentName,
+              ...(teacher.aliases || []),
+              ...(teacher.observedNames || []),
+              teacher.status,
+              teacher.sourceHint,
+              teacher.identityMemo,
+              teacher.note,
+              ...logs.flatMap((log) => [
+                log.observedName,
+                log.checkedDate,
+                log.content,
+                log.target,
+                log.source,
+                log.studentName,
+                log.uniqueLevel,
+                log.memo
+              ])
+            ].filter(Boolean).join(" "));
+            return words.every((word) => haystack.includes(word));
+          })
+          .sort((a, b) => (a.currentName || "").localeCompare(b.currentName || "", "ja"));
       }
 
       function renderTeacherCard(teacher) {
@@ -1216,6 +1484,7 @@
                 <h3 class="card-title">${escapeHtml(teacher.currentName || "名前未設定")}</h3>
                 <div class="meta-line">
                   <span>${logs.length}ログ</span>
+                  ${teacher.sourceHint ? `<span>${escapeHtml(teacher.sourceHint)}</span>` : ""}
                   ${latest ? `<span>最終確認 ${escapeHtml(latest.checkedDate || "")}</span>` : ""}
                   ${latest?.studentName ? `<span>最近: ${escapeHtml(latest.studentName)}</span>` : ""}
                 </div>
@@ -1233,6 +1502,10 @@
                   ${STATUS_OPTIONS.map((option) => `<option value="${option}" ${option === teacher.status ? "selected" : ""}>${option}</option>`).join("")}
                 </select>
               </label>
+              <div class="source-control">
+                <div class="field-label">区分メモ</div>
+                ${teacherSourceButtonsHtml(teacher)}
+              </div>
               <label>
                 識別メモ
                 <input value="${escapeAttr(teacher.identityMemo || "")}" data-teacher-id="${teacher.id}" data-teacher-field="identityMemo" placeholder="サークル / ミカの人">
@@ -1255,6 +1528,22 @@
         `;
       }
 
+      function teacherSourceButtonsHtml(teacher) {
+        const current = teacher.sourceHint || "不明";
+        return `
+          <div class="source-button-row">
+            ${teacherSourceButton(teacher.id, "フレンド", current, "handshake")}
+            ${teacherSourceButton(teacher.id, "サークル", current, "flag")}
+            ${teacherSourceButton(teacher.id, "不明", current, "")}
+          </div>
+        `;
+      }
+
+      function teacherSourceButton(teacherId, value, current, icon) {
+        const iconHtml = icon ? `<span class="source-icon ${icon}" aria-hidden="true"></span>` : "";
+        return `<button class="source-button ${value === current ? "active" : ""}" type="button" data-teacher-id="${escapeAttr(teacherId)}" data-teacher-source="${escapeAttr(value)}">${iconHtml}${escapeHtml(value)}</button>`;
+      }
+
       function rentalStudentChips(logs) {
         if (!logs.length) return `<span class="chip">登録生徒なし</span>`;
         const latestByStudent = new Map();
@@ -1273,10 +1562,18 @@
         const field = event.target.dataset.teacherField;
         const teacher = state.teachers.find((item) => item.id === id);
         if (!teacher || !field) return;
-        teacher[field] = event.target.value;
+        teacher[field] = field === "status" ? normalizeStatusValue(event.target.value) : event.target.value;
         if (field === "currentName") {
           teacher.observedNames = addUnique(teacher.observedNames || [], event.target.value);
         }
+        teacher.updatedAt = nowIso();
+        saveState();
+      }
+
+      function updateTeacherSource(teacherId, source) {
+        const teacher = state.teachers.find((item) => item.id === teacherId);
+        if (!teacher) return;
+        teacher.sourceHint = normalizeSourceValue(source);
         teacher.updatedAt = nowIso();
         saveState();
       }
@@ -1301,6 +1598,51 @@
         if (!ok) return;
         state.logs = state.logs.filter((item) => item.id !== logId);
         saveState();
+      }
+
+      function saveLogEdit(logId) {
+        const log = state.logs.find((item) => item.id === logId);
+        const panel = document.querySelector(`[data-log-editor="${logId}"]`);
+        if (!log || !panel) return;
+        const value = (field) => panel.querySelector(`[data-log-edit-field="${field}"]`)?.value || "";
+
+        const observedName = value("observedName").trim();
+        let teacherId = value("teacherId");
+        if (teacherId === "__new__") {
+          const teacher = {
+            id: makeId("teacher"),
+            currentName: observedName || log.observedName || "名前未設定",
+            aliases: [],
+            observedNames: observedName ? [observedName] : [],
+            status: "未設定",
+            sourceHint: normalizeSourceValue(value("source")),
+            identityMemo: "",
+            note: "",
+            createdAt: nowIso(),
+            updatedAt: nowIso()
+          };
+          state.teachers.push(teacher);
+          teacherId = teacher.id;
+        }
+
+        const teacher = state.teachers.find((item) => item.id === teacherId);
+        log.teacherId = teacherId;
+        log.observedName = observedName;
+        log.studentName = value("studentName").trim();
+        log.uniqueLevel = normalizeUnique(value("uniqueLevel"));
+        log.source = normalizeSourceValue(value("source"));
+        log.checkedDate = value("checkedDate") || todayString();
+        log.content = value("content").trim();
+        log.target = value("target").trim();
+        log.memo = value("memo").trim();
+        log.updatedAt = nowIso();
+
+        if (teacher) {
+          touchTeacherFromLog(teacher, log);
+        }
+        editingLogId = "";
+        saveState();
+        setStatus("search-status", "ログを更新しました。");
       }
 
       async function generateBackupCode() {
@@ -1424,7 +1766,7 @@
 
       function exportCsv() {
         const rows = [[
-          "先生ID", "現在名", "読み取り名", "確認日", "コンテンツ", "対象", "区分", "生徒名", "固有レベル", "先生状態", "識別メモ", "ログメモ"
+          "先生内部ID", "現在名", "読み取り名", "確認日", "コンテンツ", "対象", "区分", "生徒名", "固有レベル", "先生状態", "先生区分", "識別メモ", "先生メモ", "ログメモ"
         ]];
         state.logs.forEach((log) => {
           const teacher = state.teachers.find((item) => item.id === log.teacherId);
@@ -1439,11 +1781,86 @@
             log.studentName || "",
             log.uniqueLevel || "",
             teacher?.status || "",
+            teacher?.sourceHint || "",
             teacher?.identityMemo || "",
+            teacher?.note || "",
             log.memo || ""
           ]);
         });
         return rows.map((row) => row.map(csvCell).join(",")).join("\n");
+      }
+
+      function restoreStateFromCsv(text) {
+        const rows = parseCsv(text);
+        if (!rows.length) throw new Error("CSVが空です。");
+        const headers = rows[0].map((v) => v.replace(/^\uFEFF/, ""));
+        const body = rows.slice(1).filter((row) => row.some((v) => String(v || "").trim() !== ""));
+        if (!body.length) throw new Error("復元できる行がありません。");
+
+        const restored = emptyState();
+        const teachersByKey = new Map();
+        body.forEach((row) => {
+          const obj = {};
+          headers.forEach((header, i) => {
+            obj[header] = row[i] || "";
+          });
+          const internalId = valueOf(obj, ["先生内部ID", "先生ID", "teacherId", "teacher_id"]);
+          const observedName = valueOf(obj, ["読み取り名", "observedName", "先生名"]);
+          const currentName = valueOf(obj, ["現在名", "currentName", "先生名"]) || observedName || "名前未設定";
+          const sourceHint = normalizeSourceValue(valueOf(obj, ["先生区分", "sourceHint"]) || valueOf(obj, ["区分", "source"]));
+          const identityMemo = valueOf(obj, ["識別メモ", "identityMemo"]);
+          const note = valueOf(obj, ["先生メモ", "teacherNote", "note"]);
+          const key = internalId || `${normalizeName(currentName)}|${normalizeName(identityMemo)}|${sourceHint}`;
+
+          let teacher = teachersByKey.get(key);
+          if (!teacher) {
+            teacher = {
+              id: internalId && internalId.startsWith("teacher_") ? internalId : makeId("teacher"),
+              currentName,
+              aliases: [],
+              observedNames: observedName ? [observedName] : [],
+              status: normalizeStatusValue(valueOf(obj, ["先生状態", "status"])),
+              sourceHint,
+              identityMemo,
+              note,
+              keepReason: "",
+              createdAt: nowIso(),
+              updatedAt: nowIso()
+            };
+            teachersByKey.set(key, teacher);
+            restored.teachers.push(teacher);
+          } else {
+            teacher.observedNames = addUnique(teacher.observedNames || [], observedName);
+            const status = normalizeStatusValue(valueOf(obj, ["先生状態", "status"]));
+            if (!teacher.status || teacher.status === "未設定") teacher.status = status;
+            if (!teacher.sourceHint || teacher.sourceHint === "不明") teacher.sourceHint = sourceHint;
+            teacher.identityMemo = teacher.identityMemo || identityMemo;
+            teacher.note = teacher.note || note;
+            teacher.updatedAt = nowIso();
+          }
+
+          const studentName = valueOf(obj, ["生徒名", "studentName", "student"]);
+          if (!studentName && !observedName) return;
+          const log = {
+            id: makeId("log"),
+            teacherId: teacher.id,
+            observedName: observedName || currentName,
+            checkedDate: valueOf(obj, ["確認日", "checkedDate", "date"]) || todayString(),
+            content: valueOf(obj, ["コンテンツ", "content"]),
+            target: valueOf(obj, ["対象", "target", "ボス"]),
+            source: normalizeSourceValue(valueOf(obj, ["区分", "source"])),
+            studentName,
+            uniqueLevel: normalizeUnique(valueOf(obj, ["固有レベル", "uniqueLevel", "固有"])),
+            memo: valueOf(obj, ["ログメモ", "メモ", "memo"]),
+            createdAt: nowIso(),
+            updatedAt: nowIso()
+          };
+          restored.logs.push(log);
+          touchTeacherFromLog(teacher, log);
+        });
+
+        if (!restored.logs.length) throw new Error("助っ人ログとして復元できる行がありません。");
+        return migrateState(restored);
       }
 
       function csvCell(value) {
@@ -1524,11 +1941,6 @@
 
         el("search-input").addEventListener("input", renderSearchResults);
         el("parse-csv-button").addEventListener("click", createDraftsFromCsv);
-        el("load-sample-button").addEventListener("click", () => {
-          el("csv-input").value = `確認日,コンテンツ,対象,先生名,区分,生徒名,固有レベル,メモ
-${todayString()},総力戦,ビナー,A先生,フレンド,水着ハスミ,固有4,火力高め
-${todayString()},総力戦,ビナー,B先生,サークル,ミカ,固有3,前回借りた候補`;
-        });
         el("clear-csv-button").addEventListener("click", () => {
           el("csv-input").value = "";
           setStatus("import-status", "");
@@ -1549,12 +1961,37 @@ ${todayString()},総力戦,ビナー,B先生,サークル,ミカ,固有3,前回�
           }
         });
         document.addEventListener("click", (event) => {
+          const editButton = event.target.closest("[data-edit-log]");
+          if (editButton) {
+            editingLogId = editButton.dataset.editLog;
+            renderSearchResults();
+            return;
+          }
+          const cancelEditButton = event.target.closest("[data-cancel-log-edit]");
+          if (cancelEditButton) {
+            editingLogId = "";
+            renderSearchResults();
+            return;
+          }
+          const saveEditButton = event.target.closest("[data-save-log-edit]");
+          if (saveEditButton) {
+            saveLogEdit(saveEditButton.dataset.saveLogEdit);
+            return;
+          }
           const button = event.target.closest("[data-delete-log]");
           if (!button) return;
           deleteLog(button.dataset.deleteLog);
         });
         el("refresh-teachers-button").addEventListener("click", renderTeachers);
+        el("teacher-search-input").addEventListener("input", renderTeachers);
+        el("teacher-status-filter").addEventListener("change", renderTeachers);
+        el("teacher-source-filter").addEventListener("change", renderTeachers);
         el("teacher-list").addEventListener("click", (event) => {
+          const sourceButton = event.target.closest("[data-teacher-source]");
+          if (sourceButton) {
+            updateTeacherSource(sourceButton.dataset.teacherId, sourceButton.dataset.teacherSource);
+            return;
+          }
           const button = event.target.closest("[data-delete-teacher]");
           if (!button) return;
           deleteTeacher(button.dataset.deleteTeacher);
@@ -1583,8 +2020,24 @@ ${todayString()},総力戦,ビナー,B先生,サークル,ミカ,固有3,前回�
         });
         el("generate-export-button").addEventListener("click", () => {
           el("csv-export").value = exportCsv();
+          setStatus("csv-status", "CSVを作りました。");
         });
-        el("copy-export-button").addEventListener("click", () => copyText(el("csv-export").value, "backup-status", "CSVをコピーしました。"));
+        el("copy-export-button").addEventListener("click", () => {
+          if (!el("csv-export").value.trim()) {
+            el("csv-export").value = exportCsv();
+          }
+          copyText(el("csv-export").value, "csv-status", "CSVをコピーしました。");
+        });
+        el("restore-csv-button").addEventListener("click", () => {
+          if (!confirm("現在のアプリ内データを、このCSVの内容で置き換えます。")) return;
+          try {
+            state = restoreStateFromCsv(el("csv-export").value);
+            saveState();
+            setStatus("csv-status", `CSVから復元しました。先生 ${state.teachers.length}件、ログ ${state.logs.length}件です。`);
+          } catch (error) {
+            setStatus("csv-status", error.message || "CSVから復元できませんでした。", true);
+          }
+        });
       }
 
       function init() {
