@@ -260,6 +260,12 @@
       font-size: 0.84rem;
     }
 
+    .btn.mini {
+      min-height: 30px;
+      padding: 5px 8px;
+      font-size: 0.78rem;
+    }
+
     .btn:disabled {
       opacity: .55;
       cursor: not-allowed;
@@ -333,10 +339,55 @@
       flex-wrap: wrap;
     }
 
+    .card-main {
+      min-width: 0;
+      flex: 1 1 280px;
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 6px;
+      align-items: flex-start;
+      justify-content: flex-end;
+      flex: 0 0 auto;
+    }
+
     .card-title {
       margin: 0;
       font-size: 1.03rem;
       color: #0f274d;
+    }
+
+    .title-button {
+      display: inline;
+      width: auto;
+      min-height: 0;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: #0f274d;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      text-align: left;
+    }
+
+    .title-button:hover,
+    .title-button:focus-visible {
+      color: var(--primary);
+      outline: none;
+    }
+
+    .title-editor {
+      display: grid;
+      gap: 8px;
+      max-width: 420px;
+    }
+
+    .outside-danger-row {
+      display: grid;
+      justify-content: center;
+      margin: 18px 0 0;
     }
 
     .meta-line {
@@ -725,7 +776,6 @@
               状態
               <select id="teacher-status-filter">
                 <option value="all">すべて</option>
-                <option value="未設定">未設定</option>
                 <option value="残す">残す</option>
                 <option value="要確認">要確認</option>
                 <option value="入替候補">入替候補</option>
@@ -778,9 +828,10 @@
             <button class="btn primary" id="restore-csv-button" type="button">このCSVから復元する</button>
           </div>
           <div class="status-line" id="csv-status"></div>
-          <div class="button-row" style="margin-top: 28px;">
-            <button class="btn danger" id="reset-data-button" type="button">アプリ内データをリセット</button>
-          </div>
+        </div>
+        <div class="outside-danger-row">
+          <button class="btn danger" id="reset-data-button" type="button">アプリ内データをリセット</button>
+          <div class="status-line" id="reset-status"></div>
         </div>
       </section>
     </main>
@@ -794,7 +845,7 @@
     (() => {
       const STORAGE_KEY = "ba-suketto-state-v1";
       const BACKUP_PREFIX = "BA-SUKE-1";
-      const STATUS_OPTIONS = ["未設定", "残す", "要確認", "入替候補", "外した"];
+      const STATUS_OPTIONS = ["残す", "要確認", "入替候補", "外した"];
       const SOURCE_OPTIONS = ["フレンド", "サークル", "不明"];
       const UNIQUE_OPTIONS = ["不明", "固有なし", "固有1", "固有2", "固有3", "固有4"];
       const CSV_HEADERS = ["確認日", "コンテンツ", "対象", "先生名", "区分", "生徒名", "固有レベル", "メモ"];
@@ -803,6 +854,7 @@
       let drafts = [];
       let editingLogId = "";
       let editingLogField = null;
+      let editingTeacherNameId = "";
 
       const el = (id) => document.getElementById(id);
 
@@ -848,7 +900,7 @@
           ...teacher,
           aliases: Array.isArray(teacher.aliases) ? teacher.aliases : [],
           observedNames: Array.isArray(teacher.observedNames) ? teacher.observedNames : [],
-          status: teacher.status || "未設定",
+          status: teacher.status && teacher.status !== "未設定" ? teacher.status : "残す",
           sourceHint: teacher.sourceHint || "不明",
           note: teacher.note || teacher.keepReason || "",
           keepReason: ""
@@ -1072,7 +1124,7 @@
 
       function normalizeStatusValue(value) {
         const text = String(value || "").trim();
-        return STATUS_OPTIONS.includes(text) ? text : "未設定";
+        return STATUS_OPTIONS.includes(text) ? text : "残す";
       }
 
       function defaultActionForMatch(match) {
@@ -1254,7 +1306,7 @@
           currentName: name || "名前未設定",
           aliases: [],
           observedNames: name ? [name] : [],
-          status: "未設定",
+          status: "残す",
           sourceHint: draft.normalized.source || "不明",
           identityMemo: "",
           note: "",
@@ -1321,7 +1373,6 @@
             teacher?.currentName,
             ...(teacher?.aliases || []),
             ...(teacher?.observedNames || []),
-            teacher?.status,
             teacher?.sourceHint,
             teacher?.note
           ].filter(Boolean).join(" "));
@@ -1335,19 +1386,19 @@
 
       function renderLogCard(log) {
         const teacher = state.teachers.find((item) => item.id === log.teacherId);
-        const status = teacher?.status || "未設定";
-        const statusChip = status && status !== "未設定" ? `<span class="chip ${statusChipClass(status)}">${escapeHtml(status)}</span>` : "";
         return `
           <article class="log-card">
             <div class="card-top">
-              <div>
+              <div class="card-main">
                 <h3 class="card-title">${escapeHtml(log.studentName || "生徒名なし")}</h3>
                 <div class="meta-line">
                   <span>${escapeHtml(teacher?.currentName || log.observedName || "先生名なし")}</span>
                   ${log.observedName && teacher?.currentName !== log.observedName ? `<span>読み取り名: ${escapeHtml(log.observedName)}</span>` : ""}
                 </div>
               </div>
-              ${statusChip}
+              <div class="card-actions">
+                <button class="btn danger mini" type="button" data-delete-log="${log.id}">削除</button>
+              </div>
             </div>
             <div class="meta-line">
               ${editableLogChip(log, "uniqueLevel", log.uniqueLevel)}
@@ -1358,10 +1409,6 @@
             </div>
             ${log.memo ? `<div>${escapeHtml(log.memo)}</div>` : ""}
             ${renderInlineLogFieldEditor(log)}
-            <div class="button-row">
-              <button class="btn ghost small" type="button" data-edit-log="${log.id}">このログを編集</button>
-              <button class="btn danger" type="button" data-delete-log="${log.id}">このログを削除</button>
-            </div>
             ${editingLogId === log.id ? renderLogEditor(log) : ""}
           </article>
         `;
@@ -1504,7 +1551,7 @@
         const words = normalizeSearch(query).split(/\s+/).filter(Boolean);
 
         return [...state.teachers]
-          .filter((teacher) => status === "all" || (teacher.status || "未設定") === status)
+          .filter((teacher) => status === "all" || normalizeStatusValue(teacher.status) === status)
           .filter((teacher) => source === "all" || (teacher.sourceHint || "不明") === source)
           .filter((teacher) => {
             if (!words.length) return true;
@@ -1537,12 +1584,12 @@
           .sort((a, b) => String(b.checkedDate || "").localeCompare(String(a.checkedDate || "")));
         const latest = logs[0];
         const aliases = [...new Set([...(teacher.aliases || []), ...(teacher.observedNames || [])])].filter((name) => name !== teacher.currentName);
-        const statusChip = teacher.status && teacher.status !== "未設定" ? `<span class="chip ${statusChipClass(teacher.status)}">${escapeHtml(teacher.status)}</span>` : "";
+        const statusChip = teacher.status ? `<span class="chip ${statusChipClass(teacher.status)}">${escapeHtml(teacher.status)}</span>` : "";
         return `
           <article class="teacher-card">
             <div class="card-top">
-              <div>
-                <h3 class="card-title">${escapeHtml(teacher.currentName || "名前未設定")}</h3>
+              <div class="card-main">
+                ${renderTeacherTitle(teacher)}
                 <div class="meta-line">
                   <span>${logs.length}ログ</span>
                   ${latest ? `<span>最終確認 ${escapeHtml(latest.checkedDate || "")}</span>` : ""}
@@ -1550,13 +1597,12 @@
                   ${teacherSourceButtonsHtml(teacher)}
                 </div>
               </div>
-              ${statusChip}
+              <div class="card-actions">
+                ${statusChip}
+                <button class="btn danger mini" type="button" data-delete-teacher="${teacher.id}">削除</button>
+              </div>
             </div>
             <div class="grid two" style="margin-top: 12px;">
-              <label>
-                現在名
-                <input value="${escapeAttr(teacher.currentName || "")}" data-teacher-id="${teacher.id}" data-teacher-field="currentName">
-              </label>
               <label>
                 状態
                 <select data-teacher-id="${teacher.id}" data-teacher-field="status">
@@ -1574,11 +1620,23 @@
             <div class="meta-line" style="margin-top: 10px;">
               ${rentalStudentChips(logs)}
             </div>
-            <div class="button-row">
-              <button class="btn danger" type="button" data-delete-teacher="${teacher.id}">この先生カードを削除</button>
-            </div>
           </article>
         `;
+      }
+
+      function renderTeacherTitle(teacher) {
+        if (editingTeacherNameId === teacher.id) {
+          return `
+            <div class="title-editor">
+              <input value="${escapeAttr(teacher.currentName || "")}" data-teacher-name-input="${escapeAttr(teacher.id)}" aria-label="先生名">
+              <div class="button-row" style="margin-top: 0;">
+                <button class="btn primary small" type="button" data-save-teacher-name="${escapeAttr(teacher.id)}">保存する</button>
+                <button class="btn ghost small" type="button" data-cancel-teacher-name>キャンセル</button>
+              </div>
+            </div>
+          `;
+        }
+        return `<h3 class="card-title"><button class="title-button" type="button" data-edit-teacher-name="${escapeAttr(teacher.id)}">${escapeHtml(teacher.currentName || "名前未設定")}</button></h3>`;
       }
 
       function teacherSourceButtonsHtml(teacher) {
@@ -1631,6 +1689,18 @@
         saveState();
       }
 
+      function saveTeacherName(teacherId) {
+        const teacher = state.teachers.find((item) => item.id === teacherId);
+        const input = document.querySelector(`[data-teacher-name-input="${teacherId}"]`);
+        if (!teacher || !input) return;
+        const name = input.value.trim() || "名前未設定";
+        teacher.currentName = name;
+        teacher.observedNames = addUnique(teacher.observedNames || [], name);
+        teacher.updatedAt = nowIso();
+        editingTeacherNameId = "";
+        saveState();
+      }
+
       function deleteTeacher(teacherId) {
         const teacher = state.teachers.find((item) => item.id === teacherId);
         if (!teacher) return;
@@ -1667,7 +1737,7 @@
             currentName: observedName || log.observedName || "名前未設定",
             aliases: [],
             observedNames: observedName ? [observedName] : [],
-            status: "未設定",
+            status: "残す",
             sourceHint: normalizeSourceValue(value("source")),
             identityMemo: "",
             note: "",
@@ -1766,7 +1836,7 @@
             n: teacher.currentName,
             a: teacher.aliases || [],
             o: teacher.observedNames || [],
-            s: teacher.status || "未設定",
+            s: normalizeStatusValue(teacher.status),
             h: teacher.sourceHint || "",
             m: teacher.identityMemo || "",
             k: "",
@@ -1799,7 +1869,7 @@
             currentName: teacher.n,
             aliases: teacher.a || [],
             observedNames: teacher.o || [],
-            status: teacher.s || "未設定",
+            status: normalizeStatusValue(teacher.s),
             sourceHint: teacher.h || "不明",
             identityMemo: teacher.m || "",
             keepReason: "",
@@ -2082,6 +2152,23 @@
         el("teacher-status-filter").addEventListener("change", renderTeachers);
         el("teacher-source-filter").addEventListener("change", renderTeachers);
         el("teacher-list").addEventListener("click", (event) => {
+          const editNameButton = event.target.closest("[data-edit-teacher-name]");
+          if (editNameButton) {
+            editingTeacherNameId = editNameButton.dataset.editTeacherName;
+            renderTeachers();
+            return;
+          }
+          const saveNameButton = event.target.closest("[data-save-teacher-name]");
+          if (saveNameButton) {
+            saveTeacherName(saveNameButton.dataset.saveTeacherName);
+            return;
+          }
+          const cancelNameButton = event.target.closest("[data-cancel-teacher-name]");
+          if (cancelNameButton) {
+            editingTeacherNameId = "";
+            renderTeachers();
+            return;
+          }
           const sourceButton = event.target.closest("[data-teacher-source]");
           if (sourceButton) {
             updateTeacherSource(sourceButton.dataset.teacherId, sourceButton.dataset.teacherSource);
@@ -2112,7 +2199,8 @@
           localStorage.removeItem(STORAGE_KEY);
           renderAll();
           setStatus("backup-status", "");
-          setStatus("csv-status", "リセットしました。");
+          setStatus("csv-status", "");
+          setStatus("reset-status", "リセットしました。");
         });
         el("generate-export-button").addEventListener("click", () => {
           el("csv-export").value = exportCsv();
