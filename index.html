@@ -542,6 +542,7 @@
             <label>
               コンテンツ
               <select id="default-content">
+                <option value="">選択してください</option>
                 <option value="総力戦">総力戦</option>
                 <option value="大決戦">大決戦</option>
                 <option value="制約解除決戦">制約解除決戦</option>
@@ -1187,6 +1188,9 @@
             </div>
             ${log.memo ? `<div>${escapeHtml(log.memo)}</div>` : ""}
             ${teacher?.identityMemo ? `<div class="meta-line">識別メモ: ${escapeHtml(teacher.identityMemo)}</div>` : ""}
+            <div class="button-row">
+              <button class="btn danger" type="button" data-delete-log="${log.id}">このログを削除</button>
+            </div>
           </article>
         `;
       }
@@ -1307,6 +1311,17 @@
         if (!ok) return;
         state.teachers = state.teachers.filter((item) => item.id !== teacherId);
         state.logs = state.logs.filter((log) => log.teacherId !== teacherId);
+        saveState();
+      }
+
+      function deleteLog(logId) {
+        const log = state.logs.find((item) => item.id === logId);
+        if (!log) return;
+        const teacher = state.teachers.find((item) => item.id === log.teacherId);
+        const label = [teacher?.currentName || log.observedName, log.studentName, log.checkedDate].filter(Boolean).join(" / ");
+        const ok = confirm(`${label || "このログ"} を削除します。\nバックアップコードがない場合は戻せません。`);
+        if (!ok) return;
+        state.logs = state.logs.filter((item) => item.id !== logId);
         saveState();
       }
 
@@ -1460,11 +1475,11 @@
 
       function generatePrompt() {
         const date = el("default-date").value || todayString();
-        const content = el("default-content").value || "総力戦";
-        const target = el("default-target").value.trim();
-        if (!target) {
-          throw new Error("対象を入力してからプロンプトをコピーしてください。");
+        const content = el("default-content").value;
+        if (!content) {
+          throw new Error("コンテンツを選択してからプロンプトをコピーしてください。");
         }
+        const target = el("default-target").value.trim();
         return `添付したゲーム「ブルーアーカイブ」の助っ人画面スクリーンショットから、助っ人情報をCSVで出力してください。
 
 出力列は必ず次の順番にしてください。
@@ -1552,13 +1567,18 @@ ${todayString()},総力戦,ビナー,B先生,サークル,ミカ,固有3,前回�
             await copyText(prompt, "import-status", "プロンプトをコピーしました。");
           } catch (error) {
             setStatus("import-status", error.message || "プロンプトを作れませんでした。", true);
-            el("default-target").focus();
+            el("default-content").focus();
           }
         });
         el("sort-logs-button").addEventListener("click", () => {
           logSortDesc = !logSortDesc;
           el("sort-logs-button").textContent = logSortDesc ? "新しい順" : "古い順";
           renderLogs();
+        });
+        document.addEventListener("click", (event) => {
+          const button = event.target.closest("[data-delete-log]");
+          if (!button) return;
+          deleteLog(button.dataset.deleteLog);
         });
         el("refresh-teachers-button").addEventListener("click", renderTeachers);
         el("teacher-list").addEventListener("click", (event) => {
