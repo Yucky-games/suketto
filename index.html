@@ -681,8 +681,8 @@
           </div>
         </div>
         <nav class="tab-bar" aria-label="画面切り替え">
-          <button class="tab-button active" data-tab="search" type="button">探す</button>
-          <button class="tab-button" data-tab="import" type="button">取り込む</button>
+          <button class="tab-button active" data-tab="search" type="button">絞り込む</button>
+          <button class="tab-button" data-tab="import" type="button">探す</button>
           <button class="tab-button" data-tab="teachers" type="button">先生メモ</button>
           <button class="tab-button" data-tab="backup" type="button">バックアップ</button>
         </nav>
@@ -762,7 +762,6 @@
         <div class="panel slim">
           <div class="section-head">
             <h2 class="section-title">先生メモ</h2>
-            <button class="btn ghost" id="refresh-teachers-button" type="button">更新</button>
           </div>
           <div class="filter-panel">
             <label>
@@ -901,6 +900,10 @@
           sourceHint: teacher.sourceHint || "不明",
           note: teacher.note || teacher.keepReason || "",
           keepReason: ""
+        }));
+        data.logs = data.logs.map((log) => ({
+          ...log,
+          target: normalizeTargetValue(log.target)
         }));
         return data;
       }
@@ -1067,7 +1070,7 @@
           const normalized = {
             checkedDate: valueOf(obj, ["確認日", "date", "checkedDate"]) || defaults.checkedDate,
             content: valueOf(obj, ["コンテンツ", "content"]) || defaults.content,
-            target: valueOf(obj, ["対象", "ボス", "target", "boss"]) || defaults.target,
+            target: normalizeTargetValue(valueOf(obj, ["対象", "ボス", "target", "boss"]) || defaults.target),
             teacherName,
             source: normalizeSourceValue(valueOf(obj, ["区分", "所属", "source"]) || defaults.source),
             studentName,
@@ -1122,6 +1125,13 @@
       function normalizeStatusValue(value) {
         const text = String(value || "").trim();
         return STATUS_OPTIONS.includes(text) ? text : "残す";
+      }
+
+      function normalizeTargetValue(value) {
+        const text = String(value || "").normalize("NFKC").trim();
+        if (!text) return "";
+        if (/^(対象)?(未入力|未登録|未設定)$/u.test(text)) return "";
+        return text;
       }
 
       function defaultActionForMatch(match) {
@@ -1258,7 +1268,7 @@
             observedName: data.teacherName,
             checkedDate: data.checkedDate || todayString(),
             content: data.content || "",
-            target: data.target || "",
+            target: normalizeTargetValue(data.target),
             source: data.source || "不明",
             studentName: data.studentName,
             uniqueLevel: data.uniqueLevel || "不明",
@@ -1411,7 +1421,11 @@
       }
 
       function editableLogChip(log, field, value) {
-        if (!value) return "";
+        if (field !== "target" && !value) return "";
+        if (field === "target") {
+          const target = normalizeTargetValue(value);
+          return `<button class="chip chip-button" type="button" data-edit-log-field="${escapeAttr(field)}" data-log-id="${escapeAttr(log.id)}">${escapeHtml(target || "メモ")}</button>`;
+        }
         const label = field === "uniqueLevel" && normalizeUnique(value) === "不明" ? "固有レベル：不明" : value;
         return `<button class="chip chip-button" type="button" data-edit-log-field="${escapeAttr(field)}" data-log-id="${escapeAttr(log.id)}">${escapeHtml(label)}</button>`;
       }
@@ -1423,10 +1437,10 @@
           uniqueLevel: "固有レベル",
           source: "区分",
           content: "コンテンツ",
-          target: "対象",
+          target: "メモ",
           checkedDate: "確認日"
         }[field] || "項目";
-        const value = log[field] || "";
+        const value = field === "target" ? normalizeTargetValue(log[field]) : log[field] || "";
         const control = field === "uniqueLevel"
           ? logInlineSelectHtml(value, UNIQUE_OPTIONS, true)
           : field === "source"
@@ -1779,7 +1793,7 @@
         log.source = normalizeSourceValue(value("source"));
         log.checkedDate = value("checkedDate") || todayString();
         log.content = value("content").trim();
-        log.target = value("target").trim();
+        log.target = normalizeTargetValue(value("target"));
         log.memo = value("memo").trim();
         log.updatedAt = nowIso();
 
@@ -1804,7 +1818,9 @@
           if (teacher) touchTeacherFromLog(teacher, log);
         } else if (field === "checkedDate") {
           log.checkedDate = value || todayString();
-        } else if (["content", "target"].includes(field)) {
+        } else if (field === "target") {
+          log.target = normalizeTargetValue(value);
+        } else if (field === "content") {
           log[field] = value.trim();
         }
         log.updatedAt = nowIso();
@@ -1906,7 +1922,7 @@
             observedName: log.n,
             checkedDate: log.d,
             content: log.c,
-            target: log.b,
+            target: normalizeTargetValue(log.b),
             source: log.s,
             studentName: log.p,
             uniqueLevel: log.u,
@@ -2013,7 +2029,7 @@
             observedName: observedName || currentName,
             checkedDate: valueOf(obj, ["確認日", "checkedDate", "date"]) || todayString(),
             content: valueOf(obj, ["コンテンツ", "content"]),
-            target: valueOf(obj, ["対象", "target", "ボス"]),
+            target: normalizeTargetValue(valueOf(obj, ["対象", "target", "ボス"])),
             source: normalizeSourceValue(valueOf(obj, ["区分", "source"])),
             studentName,
             uniqueLevel: normalizeUnique(valueOf(obj, ["固有レベル", "uniqueLevel", "固有"])),
@@ -2170,7 +2186,6 @@
           if (!button) return;
           deleteLog(button.dataset.deleteLog);
         });
-        el("refresh-teachers-button").addEventListener("click", renderTeachers);
         el("teacher-search-input").addEventListener("input", renderTeachers);
         el("teacher-status-filter").addEventListener("change", renderTeachers);
         el("teacher-source-filter").addEventListener("change", renderTeachers);
