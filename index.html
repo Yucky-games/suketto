@@ -681,8 +681,8 @@
           </div>
         </div>
         <nav class="tab-bar" aria-label="画面切り替え">
-          <button class="tab-button active" data-tab="search" type="button">絞り込む</button>
-          <button class="tab-button" data-tab="import" type="button">探す</button>
+          <button class="tab-button active" data-tab="import" type="button">取り込み</button>
+          <button class="tab-button" data-tab="search" type="button">探す</button>
           <button class="tab-button" data-tab="teachers" type="button">先生メモ</button>
           <button class="tab-button" data-tab="backup" type="button">バックアップ</button>
         </nav>
@@ -690,7 +690,7 @@
     </header>
 
     <main class="main">
-      <section class="view active" id="view-search">
+      <section class="view" id="view-search">
         <div class="panel">
           <label>
             検索
@@ -701,7 +701,7 @@
         <div class="card-list" id="search-results"></div>
       </section>
 
-      <section class="view" id="view-import">
+      <section class="view active" id="view-import">
         <div class="panel">
           <div class="section-head">
             <h2 class="section-title">CSV取り込み</h2>
@@ -726,8 +726,8 @@
               </select>
             </label>
             <label>
-              対象
-              <input id="default-target" type="text" placeholder="ビナー / ゴズ / 任意">
+              メモ
+              <input id="default-target" type="text" placeholder="ビナー / ゴズ / 補足メモ">
             </label>
           </div>
           <div class="button-row">
@@ -1157,10 +1157,10 @@
               ${fieldHtml(index, "studentName", "生徒名", draft.normalized.studentName)}
               ${fieldHtml(index, "checkedDate", "確認日", draft.normalized.checkedDate, "date")}
               ${fieldHtml(index, "content", "コンテンツ", draft.normalized.content)}
-              ${fieldHtml(index, "target", "対象", draft.normalized.target)}
+              ${fieldHtml(index, "target", "メモ", draft.normalized.target)}
               ${selectHtml(index, "source", "区分", draft.normalized.source, SOURCE_OPTIONS)}
               ${selectHtml(index, "uniqueLevel", "固有レベル", draft.normalized.uniqueLevel, UNIQUE_OPTIONS, true)}
-              ${fieldHtml(index, "memo", "メモ", draft.normalized.memo)}
+              ${fieldHtml(index, "memo", "読み取りメモ", draft.normalized.memo)}
             </div>
             <div class="match-box">
               <label>
@@ -1500,11 +1500,11 @@
                 <input value="${escapeAttr(log.content || "")}" data-log-edit-field="content">
               </label>
               <label>
-                対象
+                メモ
                 <input value="${escapeAttr(log.target || "")}" data-log-edit-field="target">
               </label>
               <label style="grid-column: 1 / -1;">
-                メモ
+                読み取りメモ
                 <input value="${escapeAttr(log.memo || "")}" data-log-edit-field="memo">
               </label>
             </div>
@@ -2056,7 +2056,7 @@
 共通値:
 確認日: ${date}
 コンテンツ: ${content}
-対象: ${target}
+対象（アプリ上のメモ）: ${target}
 
 読み取りルール:
 1. 先生名、生徒名、固有レベル、フレンド/サークル区分を読み取ってください。
