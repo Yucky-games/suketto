@@ -507,7 +507,6 @@
         <nav class="tab-bar" aria-label="画面切り替え">
           <button class="tab-button active" data-tab="search" type="button">探す</button>
           <button class="tab-button" data-tab="import" type="button">取り込む</button>
-          <button class="tab-button" data-tab="logs" type="button">ログ一覧</button>
           <button class="tab-button" data-tab="teachers" type="button">先生メモ</button>
           <button class="tab-button" data-tab="backup" type="button">バックアップ</button>
         </nav>
@@ -584,16 +583,6 @@
         </div>
       </section>
 
-      <section class="view" id="view-logs">
-        <div class="panel slim">
-          <div class="section-head">
-            <h2 class="section-title">ログ一覧</h2>
-            <button class="btn ghost" id="sort-logs-button" type="button">新しい順</button>
-          </div>
-          <div class="card-list" id="log-list"></div>
-        </div>
-      </section>
-
       <section class="view" id="view-teachers">
         <div class="panel slim">
           <div class="section-head">
@@ -649,7 +638,6 @@
 
       let state = loadState();
       let drafts = [];
-      let logSortDesc = true;
 
       const el = (id) => document.getElementById(id);
 
@@ -1122,7 +1110,6 @@
         el("teacher-count").textContent = `先生 ${state.teachers.length}`;
         el("log-count").textContent = `ログ ${state.logs.length}`;
         renderSearchResults();
-        renderLogs();
         renderTeachers();
       }
 
@@ -1130,14 +1117,14 @@
         const query = el("search-input").value.trim();
         const list = el("search-results");
         const logs = filterLogs(query);
-        el("search-status").textContent = query ? `${logs.length}件見つかりました。` : "検索語を入れるとログを絞り込めます。";
-        list.innerHTML = logs.length ? logs.map(renderLogCard).join("") : `<div class="empty">該当するログはありません。</div>`;
+        el("search-status").textContent = query ? `${logs.length}件見つかりました。` : `保存済みログを全件表示しています。`;
+        list.innerHTML = logs.length ? logs.map(renderLogCard).join("") : `<div class="empty">${query ? "該当するログはありません。" : "保存済みログはまだありません。"}</div>`;
       }
 
       function filterLogs(query) {
         const words = normalizeSearch(query).split(/\s+/).filter(Boolean);
         let logs = [...state.logs].sort((a, b) => String(b.checkedDate || "").localeCompare(String(a.checkedDate || "")));
-        if (!words.length) return logs.slice(0, 20);
+        if (!words.length) return logs;
         return logs.filter((log) => {
           const teacher = state.teachers.find((item) => item.id === log.teacherId);
           const haystack = normalizeSearch([
@@ -1204,15 +1191,6 @@
         if (status === "入替候補" || status === "外した") return "danger";
         if (status === "要確認") return "warn";
         return "";
-      }
-
-      function renderLogs() {
-        const logs = [...state.logs].sort((a, b) => {
-          const order = String(b.checkedDate || "").localeCompare(String(a.checkedDate || ""));
-          return logSortDesc ? order : -order;
-        });
-        const list = el("log-list");
-        list.innerHTML = logs.length ? logs.map(renderLogCard).join("") : `<div class="empty">保存済みログはまだありません。</div>`;
       }
 
       function renderTeachers() {
@@ -1569,11 +1547,6 @@ ${todayString()},総力戦,ビナー,B先生,サークル,ミカ,固有3,前回�
             setStatus("import-status", error.message || "プロンプトを作れませんでした。", true);
             el("default-content").focus();
           }
-        });
-        el("sort-logs-button").addEventListener("click", () => {
-          logSortDesc = !logSortDesc;
-          el("sort-logs-button").textContent = logSortDesc ? "新しい順" : "古い順";
-          renderLogs();
         });
         document.addEventListener("click", (event) => {
           const button = event.target.closest("[data-delete-log]");
