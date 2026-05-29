@@ -361,6 +361,19 @@
       white-space: nowrap;
     }
 
+    .chip-button {
+      cursor: pointer;
+      appearance: none;
+      font: inherit;
+    }
+
+    .chip-button:hover,
+    .chip-button:focus-visible {
+      border-color: var(--primary);
+      color: var(--primary);
+      outline: none;
+    }
+
     .chip.ok {
       background: #ecfdf5;
       color: var(--ok);
@@ -426,12 +439,13 @@
       display: inline-flex;
       align-items: center;
       gap: 7px;
-      min-height: 42px;
-      padding: 8px 11px;
+      min-height: 30px;
+      padding: 4px 9px;
       border-radius: var(--radius);
       border: 1px solid var(--line-strong);
       background: #fff;
       color: #263850;
+      font-size: 0.82rem;
       font-weight: 800;
       cursor: pointer;
     }
@@ -445,8 +459,8 @@
     .source-icon {
       position: relative;
       display: inline-block;
-      width: 18px;
-      height: 18px;
+      width: 16px;
+      height: 16px;
       flex: 0 0 auto;
       color: currentColor;
     }
@@ -746,7 +760,6 @@
           </label>
           <div class="button-row">
             <button class="btn primary" id="restore-backup-button" type="button">このコードから復元</button>
-            <button class="btn danger" id="reset-data-button" type="button">アプリ内データをリセット</button>
           </div>
           <div class="status-line" id="backup-status"></div>
         </div>
@@ -759,10 +772,15 @@
           <div class="button-row">
             <button class="btn primary" id="generate-export-button" type="button">CSVを作る</button>
             <button class="btn ghost" id="copy-export-button" type="button">CSVをコピー</button>
-            <button class="btn danger" id="restore-csv-button" type="button">このCSVから復元する</button>
           </div>
           <textarea class="code-box" id="csv-export" spellcheck="false"></textarea>
+          <div class="button-row">
+            <button class="btn primary" id="restore-csv-button" type="button">このCSVから復元する</button>
+          </div>
           <div class="status-line" id="csv-status"></div>
+          <div class="button-row" style="margin-top: 28px;">
+            <button class="btn danger" id="reset-data-button" type="button">アプリ内データをリセット</button>
+          </div>
         </div>
       </section>
     </main>
@@ -784,6 +802,7 @@
       let state = loadState();
       let drafts = [];
       let editingLogId = "";
+      let editingLogField = null;
 
       const el = (id) => document.getElementById(id);
 
@@ -873,7 +892,7 @@
         else if (latest?.source) parts.push(latest.source);
         if (latest?.studentName) parts.push(latest.studentName);
         if (latest?.checkedDate) parts.push(`最終確認 ${latest.checkedDate}`);
-        if (teacher.identityMemo && parts.length < 2) parts.push(teacher.identityMemo);
+        if (teacher.note && parts.length < 2) parts.push(teacher.note);
         return `${teacher.currentName || "名前未設定"}${parts.length ? `（${parts.join(" / ")}）` : ""}`;
       }
 
@@ -1304,7 +1323,6 @@
             ...(teacher?.observedNames || []),
             teacher?.status,
             teacher?.sourceHint,
-            teacher?.identityMemo,
             teacher?.note
           ].filter(Boolean).join(" "));
           return words.every((word) => haystack.includes(word));
@@ -1318,6 +1336,7 @@
       function renderLogCard(log) {
         const teacher = state.teachers.find((item) => item.id === log.teacherId);
         const status = teacher?.status || "未設定";
+        const statusChip = status && status !== "未設定" ? `<span class="chip ${statusChipClass(status)}">${escapeHtml(status)}</span>` : "";
         return `
           <article class="log-card">
             <div class="card-top">
@@ -1328,17 +1347,17 @@
                   ${log.observedName && teacher?.currentName !== log.observedName ? `<span>読み取り名: ${escapeHtml(log.observedName)}</span>` : ""}
                 </div>
               </div>
-              <span class="chip ${statusChipClass(status)}">${escapeHtml(status)}</span>
+              ${statusChip}
             </div>
             <div class="meta-line">
-              ${chip(log.uniqueLevel)}
-              ${chip(log.source)}
-              ${chip(log.content)}
-              ${chip(log.target)}
-              ${chip(log.checkedDate)}
+              ${editableLogChip(log, "uniqueLevel", log.uniqueLevel)}
+              ${editableLogChip(log, "source", log.source)}
+              ${editableLogChip(log, "content", log.content)}
+              ${editableLogChip(log, "target", log.target)}
+              ${editableLogChip(log, "checkedDate", log.checkedDate)}
             </div>
             ${log.memo ? `<div>${escapeHtml(log.memo)}</div>` : ""}
-            ${teacher?.identityMemo ? `<div class="meta-line">識別メモ: ${escapeHtml(teacher.identityMemo)}</div>` : ""}
+            ${renderInlineLogFieldEditor(log)}
             <div class="button-row">
               <button class="btn ghost small" type="button" data-edit-log="${log.id}">このログを編集</button>
               <button class="btn danger" type="button" data-delete-log="${log.id}">このログを削除</button>
@@ -1346,6 +1365,48 @@
             ${editingLogId === log.id ? renderLogEditor(log) : ""}
           </article>
         `;
+      }
+
+      function editableLogChip(log, field, value) {
+        if (!value) return "";
+        return `<button class="chip chip-button" type="button" data-edit-log-field="${escapeAttr(field)}" data-log-id="${escapeAttr(log.id)}">${escapeHtml(value)}</button>`;
+      }
+
+      function renderInlineLogFieldEditor(log) {
+        if (!editingLogField || editingLogField.logId !== log.id) return "";
+        const field = editingLogField.field;
+        const label = {
+          uniqueLevel: "固有レベル",
+          source: "区分",
+          content: "コンテンツ",
+          target: "対象",
+          checkedDate: "確認日"
+        }[field] || "項目";
+        const value = log[field] || "";
+        const control = field === "uniqueLevel"
+          ? logInlineSelectHtml(value, UNIQUE_OPTIONS, true)
+          : field === "source"
+            ? logInlineSelectHtml(value, SOURCE_OPTIONS)
+            : `<input ${field === "checkedDate" ? 'type="date"' : 'type="text"'} value="${escapeAttr(value)}" data-inline-log-value>`;
+        return `
+          <div class="log-editor">
+            <label>
+              ${escapeHtml(label)}
+              ${control}
+            </label>
+            <div class="button-row">
+              <button class="btn primary small" type="button" data-save-log-field="${escapeAttr(log.id)}" data-log-field="${escapeAttr(field)}">保存する</button>
+              <button class="btn ghost small" type="button" data-cancel-log-field>キャンセル</button>
+            </div>
+          </div>
+        `;
+      }
+
+      function logInlineSelectHtml(value, options, allowCustom = false) {
+        const current = options.includes(value) ? value : (allowCustom ? "__custom__" : value);
+        const optionHtml = options.map((option) => `<option value="${escapeAttr(option)}" ${option === current ? "selected" : ""}>${escapeHtml(option)}</option>`).join("");
+        const customOption = allowCustom && current === "__custom__" ? `<option value="${escapeAttr(value)}" selected>${escapeHtml(value)}</option>` : "";
+        return `<select data-inline-log-value>${optionHtml}${customOption}</select>`;
       }
 
       function renderLogEditor(log) {
@@ -1454,7 +1515,6 @@
               ...(teacher.observedNames || []),
               teacher.status,
               teacher.sourceHint,
-              teacher.identityMemo,
               teacher.note,
               ...logs.flatMap((log) => [
                 log.observedName,
@@ -1477,6 +1537,7 @@
           .sort((a, b) => String(b.checkedDate || "").localeCompare(String(a.checkedDate || "")));
         const latest = logs[0];
         const aliases = [...new Set([...(teacher.aliases || []), ...(teacher.observedNames || [])])].filter((name) => name !== teacher.currentName);
+        const statusChip = teacher.status && teacher.status !== "未設定" ? `<span class="chip ${statusChipClass(teacher.status)}">${escapeHtml(teacher.status)}</span>` : "";
         return `
           <article class="teacher-card">
             <div class="card-top">
@@ -1484,12 +1545,12 @@
                 <h3 class="card-title">${escapeHtml(teacher.currentName || "名前未設定")}</h3>
                 <div class="meta-line">
                   <span>${logs.length}ログ</span>
-                  ${teacher.sourceHint ? `<span>${escapeHtml(teacher.sourceHint)}</span>` : ""}
                   ${latest ? `<span>最終確認 ${escapeHtml(latest.checkedDate || "")}</span>` : ""}
                   ${latest?.studentName ? `<span>最近: ${escapeHtml(latest.studentName)}</span>` : ""}
+                  ${teacherSourceButtonsHtml(teacher)}
                 </div>
               </div>
-              <span class="chip ${statusChipClass(teacher.status)}">${escapeHtml(teacher.status || "未設定")}</span>
+              ${statusChip}
             </div>
             <div class="grid two" style="margin-top: 12px;">
               <label>
@@ -1501,14 +1562,6 @@
                 <select data-teacher-id="${teacher.id}" data-teacher-field="status">
                   ${STATUS_OPTIONS.map((option) => `<option value="${option}" ${option === teacher.status ? "selected" : ""}>${option}</option>`).join("")}
                 </select>
-              </label>
-              <div class="source-control">
-                <div class="field-label">区分メモ</div>
-                ${teacherSourceButtonsHtml(teacher)}
-              </div>
-              <label>
-                識別メモ
-                <input value="${escapeAttr(teacher.identityMemo || "")}" data-teacher-id="${teacher.id}" data-teacher-field="identityMemo" placeholder="サークル / ミカの人">
               </label>
               <label>
                 メモ
@@ -1534,7 +1587,6 @@
           <div class="source-button-row">
             ${teacherSourceButton(teacher.id, "フレンド", current, "handshake")}
             ${teacherSourceButton(teacher.id, "サークル", current, "flag")}
-            ${teacherSourceButton(teacher.id, "不明", current, "")}
           </div>
         `;
       }
@@ -1573,7 +1625,8 @@
       function updateTeacherSource(teacherId, source) {
         const teacher = state.teachers.find((item) => item.id === teacherId);
         if (!teacher) return;
-        teacher.sourceHint = normalizeSourceValue(source);
+        const next = normalizeSourceValue(source);
+        teacher.sourceHint = teacher.sourceHint === next ? "不明" : next;
         teacher.updatedAt = nowIso();
         saveState();
       }
@@ -1641,6 +1694,28 @@
           touchTeacherFromLog(teacher, log);
         }
         editingLogId = "";
+        saveState();
+        setStatus("search-status", "ログを更新しました。");
+      }
+
+      function saveLogFieldEdit(logId, field) {
+        const log = state.logs.find((item) => item.id === logId);
+        const input = document.querySelector("[data-inline-log-value]");
+        if (!log || !input) return;
+        const value = input.value;
+        if (field === "uniqueLevel") {
+          log.uniqueLevel = normalizeUnique(value);
+        } else if (field === "source") {
+          log.source = normalizeSourceValue(value);
+          const teacher = state.teachers.find((item) => item.id === log.teacherId);
+          if (teacher) touchTeacherFromLog(teacher, log);
+        } else if (field === "checkedDate") {
+          log.checkedDate = value || todayString();
+        } else if (["content", "target"].includes(field)) {
+          log[field] = value.trim();
+        }
+        log.updatedAt = nowIso();
+        editingLogField = null;
         saveState();
         setStatus("search-status", "ログを更新しました。");
       }
@@ -1766,7 +1841,7 @@
 
       function exportCsv() {
         const rows = [[
-          "先生内部ID", "現在名", "読み取り名", "確認日", "コンテンツ", "対象", "区分", "生徒名", "固有レベル", "先生状態", "先生区分", "識別メモ", "先生メモ", "ログメモ"
+          "先生内部ID", "現在名", "読み取り名", "確認日", "コンテンツ", "対象", "区分", "生徒名", "固有レベル", "先生状態", "先生区分", "先生メモ", "ログメモ"
         ]];
         state.logs.forEach((log) => {
           const teacher = state.teachers.find((item) => item.id === log.teacherId);
@@ -1782,7 +1857,6 @@
             log.uniqueLevel || "",
             teacher?.status || "",
             teacher?.sourceHint || "",
-            teacher?.identityMemo || "",
             teacher?.note || "",
             log.memo || ""
           ]);
@@ -1809,8 +1883,8 @@
           const currentName = valueOf(obj, ["現在名", "currentName", "先生名"]) || observedName || "名前未設定";
           const sourceHint = normalizeSourceValue(valueOf(obj, ["先生区分", "sourceHint"]) || valueOf(obj, ["区分", "source"]));
           const identityMemo = valueOf(obj, ["識別メモ", "identityMemo"]);
-          const note = valueOf(obj, ["先生メモ", "teacherNote", "note"]);
-          const key = internalId || `${normalizeName(currentName)}|${normalizeName(identityMemo)}|${sourceHint}`;
+          const note = valueOf(obj, ["先生メモ", "teacherNote", "note"]) || identityMemo;
+          const key = internalId || `${normalizeName(currentName)}|${normalizeName(note)}|${sourceHint}`;
 
           let teacher = teachersByKey.get(key);
           if (!teacher) {
@@ -1821,7 +1895,7 @@
               observedNames: observedName ? [observedName] : [],
               status: normalizeStatusValue(valueOf(obj, ["先生状態", "status"])),
               sourceHint,
-              identityMemo,
+              identityMemo: "",
               note,
               keepReason: "",
               createdAt: nowIso(),
@@ -1834,7 +1908,6 @@
             const status = normalizeStatusValue(valueOf(obj, ["先生状態", "status"]));
             if (!teacher.status || teacher.status === "未設定") teacher.status = status;
             if (!teacher.sourceHint || teacher.sourceHint === "不明") teacher.sourceHint = sourceHint;
-            teacher.identityMemo = teacher.identityMemo || identityMemo;
             teacher.note = teacher.note || note;
             teacher.updatedAt = nowIso();
           }
@@ -1961,9 +2034,31 @@
           }
         });
         document.addEventListener("click", (event) => {
+          const tagButton = event.target.closest("[data-edit-log-field]");
+          if (tagButton) {
+            editingLogField = {
+              logId: tagButton.dataset.logId,
+              field: tagButton.dataset.editLogField
+            };
+            editingLogId = "";
+            renderSearchResults();
+            return;
+          }
+          const cancelFieldButton = event.target.closest("[data-cancel-log-field]");
+          if (cancelFieldButton) {
+            editingLogField = null;
+            renderSearchResults();
+            return;
+          }
+          const saveFieldButton = event.target.closest("[data-save-log-field]");
+          if (saveFieldButton) {
+            saveLogFieldEdit(saveFieldButton.dataset.saveLogField, saveFieldButton.dataset.logField);
+            return;
+          }
           const editButton = event.target.closest("[data-edit-log]");
           if (editButton) {
             editingLogId = editButton.dataset.editLog;
+            editingLogField = null;
             renderSearchResults();
             return;
           }
@@ -2016,7 +2111,8 @@
           state = emptyState();
           localStorage.removeItem(STORAGE_KEY);
           renderAll();
-          setStatus("backup-status", "リセットしました。");
+          setStatus("backup-status", "");
+          setStatus("csv-status", "リセットしました。");
         });
         el("generate-export-button").addEventListener("click", () => {
           el("csv-export").value = exportCsv();
