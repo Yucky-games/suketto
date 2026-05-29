@@ -194,12 +194,15 @@
       font-size: 0.86rem;
       font-weight: 700;
       color: #263850;
+      min-width: 0;
     }
 
     input,
     select,
     textarea {
       width: 100%;
+      min-width: 0;
+      max-width: 100%;
       border: 1px solid var(--line-strong);
       border-radius: var(--radius);
       padding: 10px 11px;
@@ -601,6 +604,10 @@
       word-break: break-all;
     }
 
+    .export-textarea {
+      margin-top: 12px;
+    }
+
     .prompt-box {
       min-height: 240px;
       font-size: 0.88rem;
@@ -624,8 +631,16 @@
       }
 
       .brand-row {
+        display: grid;
         align-items: flex-start;
+        justify-content: stretch;
+        gap: 8px;
         margin-bottom: 10px;
+      }
+
+      h1 {
+        font-size: 1.22rem;
+        white-space: nowrap;
       }
 
       .counter-strip {
@@ -634,14 +649,19 @@
       }
 
       .tab-bar {
-        overflow-x: auto;
-        display: flex;
-        padding-bottom: 3px;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        overflow: visible;
+        padding-bottom: 0;
       }
 
       .tab-button {
-        min-width: 92px;
-        flex: 0 0 auto;
+        min-width: 0;
+        width: 100%;
+        min-height: 40px;
+        padding: 7px 2px;
+        font-size: 0.82rem;
+        white-space: nowrap;
       }
 
       .main {
@@ -665,6 +685,14 @@
 
       .btn {
         width: 100%;
+      }
+
+      input[type="date"] {
+        display: block;
+        min-width: 0;
+        max-width: 100%;
+        -webkit-appearance: none;
+        appearance: none;
       }
     }
   </style>
@@ -816,7 +844,7 @@
             <button class="btn primary" id="generate-export-button" type="button">CSVを作る</button>
             <button class="btn ghost" id="copy-export-button" type="button">CSVをコピー</button>
           </div>
-          <textarea class="code-box" id="csv-export" spellcheck="false"></textarea>
+          <textarea class="code-box export-textarea" id="csv-export" spellcheck="false"></textarea>
           <div class="button-row">
             <button class="btn primary" id="restore-csv-button" type="button">このCSVから復元する</button>
           </div>
