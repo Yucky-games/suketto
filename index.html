@@ -746,9 +746,6 @@
           <div class="section-head">
             <h2 class="section-title">CSV取り込み</h2>
           </div>
-          <p class="notice">
-            AIサービスにスクリーンショットを送る場合、画面内の先生名なども外部サービスへ送信されます。
-          </p>
           <div class="grid three">
             <label>
               確認日
@@ -1392,7 +1389,7 @@
         const query = el("search-input").value.trim();
         const list = el("search-results");
         const logs = filterLogs(query);
-        el("search-status").textContent = query ? `${logs.length}件見つかりました。` : `保存済みログを全件表示しています。`;
+        el("search-status").textContent = query ? `${logs.length}件見つかりました。` : `生徒全件表示しています。`;
         list.innerHTML = logs.length ? logs.map(renderLogCard).join("") : `<div class="empty">${query ? "該当するログはありません。" : "保存済みログはまだありません。"}</div>`;
       }
 
@@ -1713,7 +1710,7 @@
           if (!latestByStudent.has(key)) latestByStudent.set(key, log);
         });
         return [...latestByStudent.values()].map((log) => {
-          const detail = [log.uniqueLevel, log.checkedDate].filter(Boolean).join(" / ");
+          const detail = [log.uniqueLevel, normalizeTargetValue(log.target), log.checkedDate].filter(Boolean).join(" / ");
           return `<span class="chip">${escapeHtml(log.studentName || "生徒名なし")}${detail ? `（${escapeHtml(detail)}）` : ""}</span>`;
         }).join("");
       }
