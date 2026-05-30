@@ -87,6 +87,37 @@
       color: #0f274d;
     }
 
+    .beta-badge {
+      display: inline-block;
+      margin-left: 4px;
+      padding: 1px 5px 2px;
+      border-radius: 999px;
+      background: var(--primary-soft);
+      color: var(--primary-strong);
+      font-size: 0.48em;
+      line-height: 1.2;
+      vertical-align: super;
+    }
+
+    .header-meta {
+      display: grid;
+      justify-items: end;
+      gap: 6px;
+    }
+
+    .credit-link {
+      color: var(--primary-strong);
+      font-size: 0.78rem;
+      font-weight: 700;
+      line-height: 1.2;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .credit-link:hover {
+      text-decoration: underline;
+    }
+
     .counter-strip {
       display: flex;
       gap: 8px;
@@ -308,6 +339,28 @@
     .status-line.error {
       color: var(--danger);
       font-weight: 700;
+    }
+
+    .toast-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      pointer-events: none;
+    }
+
+    .toast-card {
+      min-width: min(280px, 84vw);
+      padding: 14px 18px;
+      border: 1px solid #bfdbfe;
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.96);
+      box-shadow: 0 18px 50px rgba(23, 32, 51, 0.22);
+      color: #17345f;
+      font-weight: 800;
+      text-align: center;
     }
 
     .card-list {
@@ -660,6 +713,11 @@
         width: 100%;
       }
 
+      .header-meta {
+        justify-items: start;
+        width: 100%;
+      }
+
       .tab-bar {
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -714,10 +772,13 @@
     <header class="app-header">
       <div class="header-inner">
         <div class="brand-row">
-          <h1>助っ人 オボエルくん</h1>
-          <div class="counter-strip" aria-live="polite">
-            <span class="count-pill" id="teacher-count">先生数 0</span>
-            <span class="count-pill" id="log-count">生徒数 0</span>
+          <h1>助っ人 オボエルくん<span class="beta-badge">β</span></h1>
+          <div class="header-meta">
+            <a class="credit-link" href="https://x.com/yucky_games" target="_blank" rel="noopener noreferrer">made by ゆっきー</a>
+            <div class="counter-strip" aria-live="polite">
+              <span class="count-pill" id="teacher-count">先生数 0</span>
+              <span class="count-pill" id="log-count">生徒数 0</span>
+            </div>
           </div>
         </div>
         <nav class="tab-bar" aria-label="画面切り替え">
@@ -866,6 +927,9 @@
     <footer class="footer">
       非公式ファンツールです。入力内容はこの端末のブラウザ内に保存されます。
     </footer>
+    <div class="toast-modal hidden" id="toast-modal" aria-live="polite" aria-atomic="true">
+      <div class="toast-card" id="toast-message"></div>
+    </div>
   </div>
 
   <script>
@@ -882,6 +946,7 @@
       let editingLogId = "";
       let editingLogField = null;
       let editingTeacherNameId = "";
+      let toastTimer = 0;
 
       const el = (id) => document.getElementById(id);
 
@@ -2107,8 +2172,10 @@
         try {
           await navigator.clipboard.writeText(text);
           setStatus(statusId, successMessage);
+          return true;
         } catch {
           setStatus(statusId, "コピーできませんでした。手動で選択してください。", true);
+          return false;
         }
       }
 
@@ -2117,6 +2184,19 @@
         if (!node) return;
         node.textContent = message || "";
         node.classList.toggle("error", Boolean(isError));
+      }
+
+      function showToast(message) {
+        const modal = el("toast-modal");
+        const text = el("toast-message");
+        if (!modal || !text) return;
+        text.textContent = message;
+        modal.classList.remove("hidden");
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          modal.classList.add("hidden");
+          text.textContent = "";
+        }, 1800);
       }
 
       function setActiveTab(tab) {
@@ -2162,7 +2242,8 @@
         el("copy-prompt-button").addEventListener("click", async () => {
           try {
             const prompt = generatePrompt();
-            await copyText(prompt, "import-status", "プロンプトをコピーしました。");
+            const copied = await copyText(prompt, "import-status", "プロンプトをコピーしました。");
+            if (copied) showToast("プロンプトをコピーしました。");
           } catch (error) {
             setStatus("import-status", error.message || "プロンプトを作れませんでした。", true);
             el("default-content").focus();
