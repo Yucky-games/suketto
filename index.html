@@ -9,6 +9,13 @@
   <meta name="theme-color" content="#2563eb">
   <link rel="icon" type="image/png" href="assets/favicon.png">
   <link rel="apple-touch-icon" href="assets/favicon.png">
+  <script>
+    window.PendakoAnalytics = {
+      appId: "ba_suketto",
+      version: "0.1.0"
+    };
+  </script>
+  <script defer src="https://analytics.pendako.workers.dev/pendako.js"></script>
   <style>
     :root {
       color-scheme: light;
@@ -782,7 +789,7 @@
         <div class="brand-row">
           <h1>助っ人 オボエルくん<span class="beta-badge">β版</span></h1>
           <div class="header-meta">
-            <a class="credit-link" href="https://x.com/yucky_games" target="_blank" rel="noopener noreferrer">made by ゆっきー</a>
+            <a class="credit-link" href="https://x.com/yucky_games" target="_blank" rel="noopener noreferrer" data-pa-event="credit_link_click">made by ゆっきー</a>
             <div class="counter-strip" aria-live="polite">
               <span class="count-pill" id="teacher-count">先生数 0</span>
               <span class="count-pill" id="log-count">生徒数 0</span>
@@ -790,10 +797,10 @@
           </div>
         </div>
         <nav class="tab-bar" aria-label="画面切り替え">
-          <button class="tab-button active" data-tab="import" type="button">取り込み</button>
-          <button class="tab-button" data-tab="search" type="button">探す</button>
-          <button class="tab-button" data-tab="teachers" type="button">先生メモ</button>
-          <button class="tab-button" data-tab="backup" type="button">バックアップ</button>
+          <button class="tab-button active" data-tab="import" type="button" data-pa-event="tab_import_click">取り込み</button>
+          <button class="tab-button" data-tab="search" type="button" data-pa-event="tab_search_click">探す</button>
+          <button class="tab-button" data-tab="teachers" type="button" data-pa-event="tab_teachers_click">先生メモ</button>
+          <button class="tab-button" data-tab="backup" type="button" data-pa-event="tab_backup_click">バックアップ</button>
         </nav>
       </div>
     </header>
@@ -844,7 +851,7 @@
             <textarea id="csv-input" placeholder="確認日,コンテンツ,対象,先生名,区分,生徒名,固有レベル,メモ"></textarea>
           </label>
           <div class="button-row">
-            <button class="btn primary" id="parse-csv-button" type="button">プレビューする</button>
+            <button class="btn primary" id="parse-csv-button" type="button" data-pa-event="csv_preview_click">プレビューする</button>
             <button class="btn ghost" id="clear-csv-button" type="button">入力を空にする</button>
           </div>
           <div class="status-line" id="import-status"></div>
@@ -900,12 +907,12 @@
         <div class="panel">
           <h2 class="section-title">ふっかつのじゅもん</h2>
           <div class="button-row">
-            <button class="btn primary" id="generate-backup-button" type="button">じゅもんを作る</button>
+            <button class="btn primary" id="generate-backup-button" type="button" data-pa-event="backup_generate_click">じゅもんを作る</button>
             <button class="btn ghost" id="copy-backup-button" type="button">コードをコピー</button>
           </div>
           <textarea class="code-box export-textarea" id="backup-code" placeholder="BA-SUKE-1:g:..." spellcheck="false" aria-label="ふっかつのじゅもん"></textarea>
           <div class="button-row">
-            <button class="btn primary" id="restore-backup-button" type="button">このコードから復元</button>
+            <button class="btn primary" id="restore-backup-button" type="button" data-pa-event="backup_restore_click">このコードから復元</button>
           </div>
           <div class="status-line" id="backup-status"></div>
         </div>
@@ -916,12 +923,12 @@
             先生内部IDは、同じ名前の別人を区別して復元するための番号です。編集しなくて大丈夫です。
           </p>
           <div class="button-row">
-            <button class="btn primary" id="generate-export-button" type="button">CSVを作る</button>
+            <button class="btn primary" id="generate-export-button" type="button" data-pa-event="csv_export_generate_click">CSVを作る</button>
             <button class="btn ghost" id="copy-export-button" type="button">CSVをコピー</button>
           </div>
           <textarea class="code-box export-textarea" id="csv-export" spellcheck="false"></textarea>
           <div class="button-row">
-            <button class="btn primary" id="restore-csv-button" type="button">このCSVから復元する</button>
+            <button class="btn primary" id="restore-csv-button" type="button" data-pa-event="csv_restore_click">このCSVから復元する</button>
           </div>
           <div class="status-line" id="csv-status"></div>
         </div>
